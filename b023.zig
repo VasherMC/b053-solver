@@ -4,6 +4,9 @@ const std = @import("std");
 pub const Facing = enum(u2) { U, L, R, D };
 pub const Pos = u6; // 36 positions
 
+const endless = true;
+const wings = true;
+
 /// Least significant to most significant bits
 pub const Board = packed struct(u58) {
     facing: Facing,
@@ -48,7 +51,7 @@ pub const Board = packed struct(u58) {
         // Check if the move is allowed
         if (p == b.stairs) return null;
         const hovering: bool = b.at(b.gray) == 0;
-        if (hovering and b.at(p) == 0) return null; // cannot continue hovering
+        if ((!wings or hovering) and b.at(p) == 0) return null; // cannot continue hovering
         // update the state as appropriate
         return Board{
             .tiles = b.tiles,
@@ -137,7 +140,7 @@ pub const Board = packed struct(u58) {
     pub fn cant_Z(b: Board, prev: Action) bool {
         const fw: Pos = move_by(b.gray, b.facing);
         const tile = b.at(fw);
-        return prev == .Z or (fw == b.gray) or ((b.pocket == 0) and (tile == 0));
+        return prev == .Z or (fw == b.gray) or if (endless) ((b.pocket == 0) and (tile == 0)) else (@as(u1, @intCast(b.pocket)) == b.tile);
     }
 };
 
