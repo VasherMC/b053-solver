@@ -3,17 +3,18 @@ const std = @import("std");
 
 const brand = @import("b023.zig");
 
+// The desired end state
+// one of add, gor, lev, cif, dev, trailer
+const goal_tile = brand.trailer_tile;
+
 // Limit move depth, if a solution is known to exist within a specific move count
-// ZDZUZRUZUZDRZDUZDLZRZLDZUZLLUDZRZX was previously found manually (and has depth ~34)
-// Running this program finds solutions 1 move shorter (when taking wings into account)
-const MAX_DEPTH: u8 = 34;
+const MAX_DEPTH: u8 = 33;
 
 const Board = brand.Board;
 const Action = brand.Action;
 const Pos = brand.Pos;
 const b023 = brand.b023;
 const is_duplicate = brand.is_duplicate_board;
-const trailer_tile = brand.trailer_tile;
 
 const Item = packed struct {
     b: Board,
@@ -29,11 +30,15 @@ pub fn main(init: std.process.Init) !void {
     try run_bfs_tile(gpa);
 }
 
-const compressedStream8 = @import("bfs_move.zig").compressedStream8;
-
 /// Backtrace path through state space
-fn trace_path(end: Item, depth: u8, finalized: []const std.ArrayList(Item)) !void {
-    std.debug.print("Found path (reversed): ", .{});
+fn trace_path(end: Item, last_move: Action, depth: u8, finalized: []const std.ArrayList(Item)) !void {
+    std.debug.print("Found path (reversed): {c}", .{@as(u8, switch (last_move) {
+        .Z => 'Z',
+        .U => 'U',
+        .L => 'L',
+        .R => 'R',
+        .D => 'D',
+    })});
     defer std.debug.print("\n\n", .{});
     var cur: Item = end;
     var b = end.b;
@@ -93,7 +98,7 @@ fn item_lessThan(_: void, a: Item, b: Item) bool {
 
 fn prune(result: Board, depth: u8) bool {
     // ignore if the goal state is definitely not reachable within MAX_DEPTH total steps
-    return brand.heuristic(result.tiles) + depth > MAX_DEPTH;
+    return brand.heuristic(result.tiles, goal_tile) + depth > MAX_DEPTH;
 }
 
 const duplicate_stats = true;
@@ -146,18 +151,18 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
             std.debug.print("\n", .{});
         }
         todo.clearAndFree(alloc);
-        if (depth + 1 == MAX_DEPTH) continue;
         // generate states for next depth
         for (finalized[depth].items) |b| {
             for (std.enums.values(Action)) |a| {
                 if (a == .Z and b.cant_z) continue; // we already computed this so may as well use it
                 if (b.b.do_action(a)) |result| {
-                    if (result.tiles == trailer_tile) {
-                        try trace_path(b, @intCast(depth), finalized[0..depth]);
-                        found = true;
-                        continue;
-                    }
-                    if (prune(result, @as(u8, @intCast(depth + 1)))) continue;
+                    if (result.tiles == goal_tile) {
+                        if (result.stairs > 35) {
+                            try trace_path(b, a, @intCast(depth), finalized[0 .. depth + 1]);
+                            found = true;
+                        }
+                    } else if (prune(result, @as(u8, @intCast(depth + 1)))) continue;
+                    if (depth + 1 == MAX_DEPTH) continue;
                     // We don't deduplicate here because it's unordered
                     try todo.append(alloc, .{ .b = result, .p = switch (a) {
                         .Z => .Z,
@@ -172,7 +177,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
             }
         }
         std.debug.print("Finished generating {} states at depth {}\n", .{ todo.items.len, depth + 1 });
-        if (found) break;
+        //if (found) break;
     }
     std.debug.print("\nDone\n", .{});
 }

@@ -153,16 +153,20 @@ pub fn move_by(p: Pos, f: Facing) Pos {
     };
 }
 
+pub const gor_tile: u36 = 0b001100_001100_100100_110001_111100_111100;
+pub const lev_tile: u36 = 0b100011_001111_100100_001100_000001_110011;
+pub const cif_tile: u36 = 0b110001_010101_010010_101000_100100_110001;
+pub const dev_tile: u36 = 0b110001_101001_100110_011001_100101_100011;
 pub const trailer_tile: u36 = 0b100001_000000_010010_110011_000000_101101;
 
 /// basic heuristic for brand rooms without glass / breakable tiles
 /// Is a consistent heuristic, both with and without the Endless Rod.
 /// However it does not account for hovering state with wings.
-pub fn heuristic(a: u36) u8 {
+pub fn heuristic(a: u36, comptime goal: u36) u8 {
     // for each tile that is different, we must either take or place it
     // Also for each such tile, we must move to face it
     // (we may already be facing one such tile)
-    return @popCount(a ^ trailer_tile) * 2 - 1;
+    return @popCount(a ^ goal) * 2 - 1;
 }
 
 // B223 start (Stairs appear as a tile here)
@@ -177,6 +181,7 @@ pub const b023 = Board{
 
 test "Tile" {
     try std.testing.expect(b023.at(0) == 1);
+    try std.testing.expect(b023.at(1) == 0);
     try std.testing.expect(b023.at(15) == 1);
     try std.testing.expect(b023.at(32) == 1);
     try std.testing.expect(b023.at(35) == 1);
