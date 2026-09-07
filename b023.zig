@@ -173,6 +173,17 @@ pub fn heuristic(a: u36, comptime goal: u36) u8 {
     return @popCount(a ^ goal) * 2 - 1;
 }
 
+fn heuristic_2(a: u36, facing: u36, comptime goal: u36) u8 {
+    // for each tile that is different, we must either take or place it
+    // Also for each such tile, we must move to face it
+    // (we may already be facing one such tile)
+    return @popCount(a ^ goal) + @popCount(a ^ goal & ~facing);
+}
+pub fn heuristic2(b: Board, comptime goal: u36) u8 {
+    const forward = move_by(b.gray, b.facing);
+    return heuristic_2(b.tiles, if (forward == b.gray) 0 else @as(u36, 1) << forward, goal);
+}
+
 // B223 start (Stairs appear as a tile here)
 const start_tiles = 0b100101_000110_011111_111110_011000_100001;
 pub const b023 = Board{
