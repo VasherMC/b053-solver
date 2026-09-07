@@ -1,5 +1,7 @@
-/// BFS searcher for b053
+/// BFFS (breadth first frontier search?) searcher for b053
+/// where the 'frontier' is the number of tiles remaining on the board
 /// Goes in batches by tilecount; discards higher tilecounts after exploring
+/// within-tilecount is regular BFS
 const std = @import("std");
 
 pub const wings = false;
