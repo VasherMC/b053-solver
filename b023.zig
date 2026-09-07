@@ -194,7 +194,7 @@ pub const b023 = Board{
     .stairs = 32,
 };
 
-test "Tile" {
+test "b023_start" {
     try std.testing.expect(b023.at(0) == 1);
     try std.testing.expect(b023.at(1) == 0);
     try std.testing.expect(b023.at(15) == 1);
@@ -208,6 +208,22 @@ test "Tile" {
     try std.testing.expect(b023.do_action(.U).?.do_action(.D).? == b023);
     try std.testing.expect(b023.do_action(.D).?.cant_Z(.D));
     try std.testing.expect(b023.do_action(.U).?.cant_Z(.U));
+}
+
+test "dev_start" {
+    const dev_position = Board{
+        .tiles = dev_tile,
+        .gray = 6,
+        .facing = .U,
+        .pocket = 1,
+        .stairs = 37, // in pocket
+    };
+    if (endless) try std.testing.expect(dev_position.do_action(.Z).?.pocket == 2);
+    if (endless) try std.testing.expect(dev_position.do_action(.Z).?.stairs == 37);
+    try std.testing.expect(dev_position.do_action(.D).?.gray == 0);
+    try std.testing.expect(dev_position.do_action(.D).?.do_action(.L).?.do_action(.Z).?.pocket == 0);
+    try std.testing.expect(dev_position.do_action(.D).?.do_action(.L).?.do_action(.Z).?.stairs == 2);
+    try std.testing.expect(dev_position.do_action(.D).?.do_action(.L).?.do_action(.Z).?.gray == 1);
 }
 
 /// Check whether states are effectively duplicates
