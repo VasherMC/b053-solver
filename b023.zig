@@ -140,7 +140,7 @@ pub const Board = packed struct(u58) {
     pub fn cant_Z(b: Board, prev: Action) bool {
         const fw: Pos = move_by(b.gray, b.facing);
         const tile = b.at(fw);
-        return prev == .Z or (fw == b.gray) or if (endless) ((b.pocket == 0) and (tile == 0)) else (@as(u1, @intCast(b.pocket)) == b.tile);
+        return prev == .Z or (fw == b.gray) or if (endless) ((b.pocket == 0) and (tile == 0)) else (@as(u1, @intCast(b.pocket)) == tile);
     }
 };
 
@@ -190,8 +190,9 @@ test "Tile" {
     try std.testing.expect(b023.at(35) == 1);
 
     try std.testing.expect(!b023.cant_Z(.D));
-    try std.testing.expect(b023.do_action(.D).?.do_action(.D).?.do_action(.D) == null);
-    try std.testing.expect(b023.do_action(.D).?.do_action(.R).?.do_action(.R) == null);
+    if (wings) try std.testing.expect(b023.do_action(.D).?.do_action(.D).?.do_action(.D) == null);
+    if (wings) try std.testing.expect(b023.do_action(.D).?.do_action(.R).?.do_action(.R) == null);
+    if (!wings) try std.testing.expect(b023.do_action(.D).?.do_action(.D) == null);
     try std.testing.expect(b023.do_action(.U).?.do_action(.D).? == b023);
     try std.testing.expect(b023.do_action(.D).?.cant_Z(.D));
     try std.testing.expect(b023.do_action(.U).?.cant_Z(.U));
