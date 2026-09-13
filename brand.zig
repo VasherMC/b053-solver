@@ -13,7 +13,7 @@ pub const Tile = enum(u2) {
     Stairs = 0b01,
     Glass = 0b10,
     Tile = 0b11,
-    inline fn walkable(t: Tile) u1 {
+    pub inline fn walkable(t: Tile) u1 {
         return @intCast(@intFromEnum(t) >> 1);
     }
 };
@@ -320,4 +320,10 @@ pub fn is_duplicate_board(a: Board, b: Board, prev_a: Action, prev_b: Action) bo
     if (@as(u80, @bitCast(a)) ^ @as(u80, @bitCast(b)) > 3) return false;
     if (prev_a == .Z and prev_b == .Z) return true; // can't Z twice in a row
     return !a.can_Z(prev_a) and !b.can_Z(prev_b);
+}
+
+pub fn is_duplicate_board2(a: Board, b: Board, a_cant_z: bool, b_cant_z: bool) bool {
+    if (a == b) return true;
+    if (@as(u80, @bitCast(a)) ^ @as(u80, @bitCast(b)) > 3) return false;
+    return a_cant_z and b_cant_z;
 }
