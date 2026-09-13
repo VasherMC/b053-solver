@@ -277,7 +277,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator, io: std.Io, start_tiles: u6) !void {
     //var over_100 = false;
     while (tiles >= MIN_TILES) {
         var processed: usize = 0;
-        var stats_dupe_depth = if (duplicate_stats) [_]usize{0} ** MAX_DEPTH else void;
+        var stats_dupe_depth = if (duplicate_stats) [_]usize{0} ** MAX_DEPTH else {};
         for (&todo, 0..todo.len) |*todo_bucket, depth| {
             if (todo_bucket.items.len == 0) continue;
             std.debug.print("sorting and actioning depth {}\n", .{depth});
