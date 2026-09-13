@@ -6,15 +6,23 @@ const brand = @import("brand.zig");
 
 // The desired end state
 // one of add, gor, lev, cif, dev, trailer
-const goal_tile = brand.tan_tile;
+const goal_tile = brand.bee_tile;
 
 pub const wings = true;
 // Limit move depth, if a solution is known to exist within a specific move count
-const MAX_DEPTH: u8 = 1 + 41;
+const MAX_DEPTH: u8 = 1 + 46;
 // CIF + wings: max depth 35
 //  Pre-existing sequence ZDLDDUZULUDRRUURRDLZDDZDZLDRRUURUDD  proven optimal (~4.5GB RAM)
 // TAN + wings: max depth 41
+//  pre-existing LLRZUDDRDDLRZDURZRLZULUURZRLZRZUDDLDDUZDZ (depth 41 + XX)
+//  search found LLRZUDDRRDZURUZLZRZLDLLRZDDZLRRRLZUDZ  (37 + XX)  (1h40m 50gb peak footprint 10gb max rss)
+//  and          RRRLZUDDLDZULLUZRZLZRDLRZDDZLRRRLZUDZ  (37 + XX)
+//  manual edit: RRRLZUDDLDZULLUZDRZULZRZDDDZLRRRLZUDZ  (37 + XX)
 // BEE + wings: max depth 46
+//  pre-existing ULLDRZRRDDZDZDRLULULRUUZRRZLDZDZLUZRZUDZURULZL
+// LEV + wings: max depth 33
+//  manually found ZRDDRRLZLURZDDLUZDZLDULLURUULRURR XX
+//  search found   ZRULLDLRDRDRLDDULLURRZRRRULDZLZDZ X
 
 const Board = brand.Board;
 const Action = brand.Action;
