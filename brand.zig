@@ -257,6 +257,7 @@ pub const tan_tile: u35 = 0b101101_001100_101101_110011_101101_11001;
 pub const lev_tile: u35 = 0b100011_001111_100100_001100_000001_11001;
 pub const cif_tile: u35 = 0b110001_010101_010010_101000_100100_11000;
 pub const SE_tile: u35 = 0b110001_101001_100110_011001_100101_10001;
+pub const trailer_tile: u35 = 0b100001_000000_010010_110011_000000_10110;
 
 pub const eus_tot = @popCount(eus_tile);
 pub const bee_tot = @popCount(bee_tile);
@@ -287,6 +288,18 @@ test "Tile" {
     try std.testing.expect(b053.do_action(.Z).?.tileCount() == 33);
     try std.testing.expect(b053.do_action(.D).?.tileCount() == 33);
     try std.testing.expect(b053.do_action(.U).?.tileCount() == 32);
+}
+
+test "trailer burdenless" {
+    for ([_][]const u8{
+        "ZRDUUDZRZLLRZRLZDUZURLDDDUUZDZDUZDZDZUUZDDUZDZDRLUUDZUZDRZLUDZUUDZURLZDUZLRZLZRDUZUDZLZLZRDUZRZLLZRUZDRZRZLLRZLLRZLDUUDZRLZDUZDZURLZLRZDZDZRLLRULRZUZDDZUUDZUZUZLRDDZUZDRLZDZ",
+        "ZURDDUZRZLLRZRLZURLDZDDUUZDZDUZDZDZUUZDDUZDZDRLUUDZUZDRZLUDZUUDZURLZDUZDLUZRLZRZRZLDUZUDZLZLUZDRRZLLRZLDUZLRZUDZULRZDUZDDDUUZDZDZUUZDDLRZULRZUDZRLZUUZ",
+        "ZURDDUZRZLLRZRLZURLDZDDUUZDZDUZDZDZUUZDDUZDZDRLUUDZUZDRZLUDZUUDZURLZDUZDZULZRZRZLDUZUDZLZLUZDRRZLLRZLDUZULDRZUDZDDUUZDZLDRDURZLUUZDZRLZUZ",
+    }) |path| {
+        const p = b053.do_actions(path).?;
+        try std.testing.expect(p.tiles == trailer_tile);
+        try std.testing.expect(p.pocket == .Stairs);
+    }
 }
 
 pub fn check_solution(b: Board, tilecount: usize) bool {
