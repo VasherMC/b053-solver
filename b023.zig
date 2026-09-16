@@ -5,7 +5,7 @@ pub const Facing = enum(u2) { U, L, R, D };
 pub const Pos = u6; // 36 positions
 
 const endless = true;
-const wings = true;
+const wings = false;
 
 pub const BT = @typeInfo(Board).@"struct".backing_integer.?;
 /// Least significant to most significant bits
@@ -225,6 +225,12 @@ test "b023_start" {
     try std.testing.expect(b023.do_action(.U).?.do_action(.D).? == b023);
     try std.testing.expect(b023.do_action(.D).?.cant_Z(.D));
     try std.testing.expect(b023.do_action(.U).?.cant_Z(.U));
+}
+
+test "gor" {
+    if (endless) {
+        try std.testing.expect(b023.do_actions("ZLZRRRZRUZUZDDZDZUUZLULZDLUZDRUZDRRDZLUZLRZLUZULZLZRRLZDDLZRDZLZURRZDZDLUZRZDZLLZUZRZDZDRLZUZ").?.tiles == gor_tile);
+    }
 }
 
 test "dev_start" {
