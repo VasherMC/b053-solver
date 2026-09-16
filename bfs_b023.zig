@@ -14,7 +14,7 @@ const Board = brand.Board;
 const BT = brand.BT;
 const Action = brand.Action;
 const Pos = brand.Pos;
-const b023 = brand.b023;
+const start = brand.b023;
 const is_duplicate = brand.is_duplicate_board;
 
 const Item = packed struct {
@@ -57,7 +57,7 @@ fn trace_path(end: Item, last_move: Action, depth: u8, finalized: []const std.Ar
             },
         })});
         b = cur.b.reverse(cur.p);
-        if (b == b023) return;
+        if (b == start) return;
         const idx = std.sort.binarySearch(Item, finalized[d - 1].items, b, board_item_cmp).?;
         cur = finalized[d - 1].items[idx];
         d -= 1;
@@ -110,7 +110,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
     // grouped by move depth
     // individual buckets sorted or otherwise mergeable
     var todo: std.ArrayList(Item) = .empty;
-    try todo.append(alloc, .{ .b = b023, .p = .D, .cant_z = false });
+    try todo.append(alloc, .{ .b = start, .p = .D, .cant_z = false });
     // while iterating through 'todo' we prune as well by checking finalized before inserting
     // each bucket should be fast to query by Board (at worst O(logn))
     var finalized = [_]std.ArrayList(Item){.empty} ** MAX_DEPTH;
@@ -185,7 +185,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
     std.debug.print("\nDone\n", .{});
 }
 
-const min_heuristic = brand.heuristic2(b023, goal_tile);
+const min_heuristic = brand.heuristic2(start, goal_tile);
 
 /// Backtrace path through state space
 fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX_DEPTH]std.ArrayList(Item)) !void {
@@ -212,7 +212,7 @@ fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX
             },
         })});
         b = cur.b.reverse(cur.p);
-        if (b == b023) return;
+        if (b == start) return;
         const hd = (d - 1) + brand.heuristic2(b, goal_tile) - min_heuristic;
         const idx = std.sort.binarySearch(Item, finalized[hd][d - 1].items, b, board_item_cmp).?;
         cur = finalized[hd][d - 1].items[idx];
@@ -244,7 +244,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
     const Extra_Move_limit = MAX_DEPTH;
     var finalized: [Extra_Move_limit][MAX_DEPTH]std.ArrayList(Item) =
         [_][MAX_DEPTH]std.ArrayList(Item){@splat(std.ArrayList(Item).empty)} ** Extra_Move_limit;
-    try finalized[0][0].append(alloc, .{ .b = b023, .p = .D, .cant_z = false });
+    try finalized[0][0].append(alloc, .{ .b = start, .p = .D, .cant_z = false });
     defer {
         for (finalized[0..]) |*f_bucket| for (f_bucket[0..]) |*bucket| if (bucket.items.len > 0) bucket.deinit(alloc);
     }
