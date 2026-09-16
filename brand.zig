@@ -26,6 +26,7 @@ const allow_wings: bool = blk: {
     break :blk wings;
 };
 
+pub const BT = @typeInfo(Board).@"struct".backing_integer.?;
 /// Least significant to most significant bits
 /// (important for bucketing [top 16 bits] / sorting)
 /// having tiles as MSB cuts time at depth 38 from 30s->25s (mostly in sorting) compared to having glass as MSB
@@ -37,6 +38,7 @@ pub const Board = packed struct(u80) {
     glass: u35, // bit set = unusual (walkable->solid instead of glass, unwalkable->stairs [or hover state])
     tiles: u35, // bit set = walkable (tile/glass)
 
+    pub const invalid: Board = @bitCast(@as(BT, 0));
     pub fn at(b: Board, p: Pos) Tile {
         if (p > 34) unreachable;
         return @enumFromInt(@as(u2, @intCast((b.glass >> p) & 1)) | @as(u2, @intCast(((b.tiles >> p) & 1) << 1)));
@@ -215,6 +217,21 @@ pub const Board = packed struct(u80) {
         const fw: Pos = move_by(b.gray, b.facing);
         const tile = b.at(fw);
         return prev != .Z and (fw != b.gray) and ((b.pocket == .Empty) != (tile == .Empty));
+    }
+
+    pub fn do_actions(b: Board, actions: []const u8) ?Board {
+        var p = b;
+        for (actions) |c| {
+            p = p.do_action(switch (c) {
+                'Z' => .Z,
+                'U' => .U,
+                'L' => .L,
+                'R' => .R,
+                'D' => .D,
+                else => unreachable,
+            }) orelse return null;
+        }
+        return p;
     }
 };
 
