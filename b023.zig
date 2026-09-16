@@ -1,8 +1,8 @@
-/// Solver for Trailer brand on B223 with Wings and Endless Rod
+/// Solver for B023
 const std = @import("std");
 
 pub const Facing = enum(u2) { U, L, R, D };
-pub const Pos = u6; // 36 positions
+pub const Pos = u6;
 
 const endless = true;
 const wings = false;
@@ -13,7 +13,7 @@ pub const Board = packed struct(u58) {
     facing: Facing,
     gray: Pos,
     pocket: u8, // count of tiles (Endless Rod) - only need u5 for the 18 tiles on B023
-    tiles: u36, // bit set = tile. Cut from u36->u32 due to statues in corners on B223
+    tiles: u36, // bit set = tile (or stairs)
     stairs: u6, // 0-35 for a specific tile; 36+ is its position in the pocket
 
     pub const invalid: Board = @bitCast(@as(BT, 0));
@@ -201,7 +201,7 @@ pub fn heuristic2(b: Board, comptime goal: u36) u8 {
     return heuristic_2(b.tiles, if (forward == b.gray) 0 else @as(u36, 1) << forward, goal);
 }
 
-// B223 start (Stairs appear as a tile here)
+// B023 start (Stairs appear as a tile here)
 const start_tiles = 0b100101_000110_011111_111110_011000_100001;
 pub const b023 = Board{
     .tiles = start_tiles,
