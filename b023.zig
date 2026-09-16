@@ -7,6 +7,7 @@ pub const Pos = u6; // 36 positions
 const endless = true;
 const wings = true;
 
+pub const BT = @typeInfo(Board).@"struct".backing_integer.?;
 /// Least significant to most significant bits
 pub const Board = packed struct(u58) {
     facing: Facing,
@@ -15,6 +16,7 @@ pub const Board = packed struct(u58) {
     tiles: u36, // bit set = tile. Cut from u36->u32 due to statues in corners on B223
     stairs: u6, // 0-35 for a specific tile; 36+ is its position in the pocket
 
+    pub const invalid: Board = @bitCast(@as(BT, 0));
     pub fn at(b: Board, p: Pos) u1 {
         if (p > 35) unreachable;
         return @intCast((b.tiles >> p) & 1);
@@ -84,8 +86,8 @@ pub const Board = packed struct(u58) {
                 // pickup if a tile is there
                 // place if its empty
                 return switch (f_tile) {
-                    1 => b.pickup(forward),
-                    0 => b.place(forward),
+                    1 => if (endless or b.pocket == 0) b.pickup(forward) else null,
+                    0 => if (b.pocket > 0) b.place(forward) else null,
                 };
             },
             else => {
@@ -141,6 +143,21 @@ pub const Board = packed struct(u58) {
         const fw: Pos = move_by(b.gray, b.facing);
         const tile = b.at(fw);
         return prev == .Z or (fw == b.gray) or if (endless) ((b.pocket == 0) and (tile == 0)) else (@as(u1, @intCast(b.pocket)) == tile);
+    }
+
+    pub fn do_actions(b: Board, actions: []const u8) ?Board {
+        var p = b;
+        for (actions) |c| {
+            p = p.do_action(switch (c) {
+                'Z' => .Z,
+                'U' => .U,
+                'L' => .L,
+                'R' => .R,
+                'D' => .D,
+                else => unreachable,
+            }) orelse return null;
+        }
+        return p;
     }
 };
 
@@ -234,7 +251,7 @@ pub fn is_duplicate_board(a: Board, b: Board, a_cant_z: bool, b_cant_z: bool) bo
     return is_duplicate(@bitCast(a), @bitCast(b), a_cant_z, b_cant_z);
 }
 
-pub fn is_duplicate(a: u58, b: u58, a_cant_z: bool, b_cant_z: bool) bool {
+pub fn is_duplicate(a: BT, b: BT, a_cant_z: bool, b_cant_z: bool) bool {
     if (a == b) return true;
     if (a ^ b > 3) return false;
     return a_cant_z and b_cant_z;
