@@ -207,7 +207,7 @@ pub fn heuristic3(b: Board, comptime goal: u36) u8 {
     const forward = move_by(b.gray, b.facing);
     const stairs = if (b.stairs < 36) @as(u36, 1) << b.stairs else 0;
     const have_tile = (b.pocket != 0) and (b.stairs -% 37 != b.pocket);
-    const excess = b.tiles & ~(goal | stairs); // stairs are always excess
+    const excess = (b.tiles & ~goal) | stairs; // stairs are always excess
     const missing = goal & ~(b.tiles ^ stairs); // stairs don't count as a filling tile
     // good facing if we can pick up excess or fill missing
     // (since stairs are counted as excess, doesnt matter if they are also in missing)
@@ -268,7 +268,7 @@ pub fn heuristic_gor_nowings(b: Board, comptime goal: u36) u8 {
     const forward = move_by(b.gray, b.facing);
     const stairs = if (b.stairs < 36) @as(u36, 1) << b.stairs else 0;
     const have_tile = (b.pocket != 0) and (b.stairs -% 37 != b.pocket);
-    const excess = b.tiles & ~(goal | stairs); // stairs are always excess
+    const excess = (b.tiles & ~goal) | stairs; // stairs are always excess
     const missing = goal & ~(b.tiles ^ stairs); // stairs don't count as a filling tile
     // good facing if we can pick up excess or fill missing
     // (since stairs are counted as excess, doesnt matter if they are also in missing)
@@ -358,14 +358,14 @@ test "gor heuristic" {
         try std.testing.expect(H(s9, gor_tile) == H(s8, gor_tile) - 1);
         //
         try std.testing.expect(H(s3.do_action(.R).?, gor_tile) == H(s3, gor_tile));
-        try std.testing.expect(H(s3.do_action(.R).?.do_action(.L).?, gor_tile) == H(s3, gor_tile));
+        try std.testing.expect(s3.do_action(.R).?.do_action(.L).? == s3);
+        const s3_lr = s3.do_action(.L).?.do_action(.R).?;
+        try std.testing.expect(s3 != s3_lr);
+        try std.testing.expect(H(s3, gor_tile) == H(s3_lr, gor_tile));
         const s3_rz = s3.do_action(.R).?.do_action(.Z).?;
         try std.testing.expect(s3_rz.stairs == 31);
         try std.testing.expect(s3_rz.gray == 32);
         try std.testing.expect(s3_rz.facing == .R);
-        std.debug.print("{} ", .{H(s3, gor_tile)});
-        std.debug.print("{} ", .{H(s3_rz, gor_tile)});
-        // TODO
         try std.testing.expect(H(s3_rz, gor_tile) == H(s3, gor_tile) + 1);
     }
 }
