@@ -201,6 +201,172 @@ pub fn heuristic2(b: Board, comptime goal: u36) u8 {
     return heuristic_2(b.tiles, if (forward == b.gray) 0 else @as(u36, 1) << forward, goal);
 }
 
+pub fn heuristic3(b: Board, comptime goal: u36) u8 {
+    // Also consider situation where we need to replace stairs with a tile,
+    // and whether we can actually place in our facing direction
+    const forward = move_by(b.gray, b.facing);
+    const stairs = if (b.stairs < 36) @as(u36, 1) << b.stairs else 0;
+    const have_tile = (b.pocket != 0) and (b.stairs -% 37 != b.pocket);
+    const excess = b.tiles & ~(goal | stairs); // stairs are always excess
+    const missing = goal & ~(b.tiles ^ stairs); // stairs don't count as a filling tile
+    // good facing if we can pick up excess or fill missing
+    // (since stairs are counted as excess, doesnt matter if they are also in missing)
+    const good_facing = ((excess >> forward) & 1) | if (have_tile) (missing >> forward) & 1 else 0;
+    return 2 * (@popCount(excess) + @popCount(missing)) - good_facing;
+}
+
+pub fn heuristic4(b: Board, comptime goal: u36) u8 {
+    // also consider islands that are not accessible from b.gray in (b.tiles)
+    // problem is that these can share 'access points' => connecting them (T-junction) would decrease H by >1
+    // also, facing becomes more complex:
+    // after placing access tile, need to know whether removing access tile (still in excess) would create island
+    // facing access tile: good_facing = 1
+    // placing access tile: remove the tile from excess (still in missing), good_facing = 0
+    // move to pick up/place the island: good_facing = 1
+    // move to face access tile again: good_facing = 1 (island has been resolved)
+    _ = // need to remove the top 2 tiles: placing between them
+        \\..@.@.
+        \\...^..
+        \\...##.
+        \\...##.
+    ;
+    _ = // where the two topleft tiles need removal
+        \\..@...
+        \\.@.<##
+        \\..#.##
+    ;
+    // use flood fill? or rather tilefill where we only fill where a tile can be placed
+    // start with a floodfill to accessible tiles
+    var accessible = @as(u36, 1) << b.gray;
+    const U_border: u36 = 0b111111_000000_000000_000000_000000_000000;
+    const L_border: u36 = 0b100000_100000_100000_100000_100000_100000;
+    const R_border: u36 = 0b000001_000001_000001_000001_000001_000001;
+    const D_border: u36 = 0b000000_000000_000000_000000_000000_111111;
+    // floodfill to accessible b.tiles
+    var changed = true;
+    while (changed) {
+        const new = accessible | (b.tiles &
+            ((accessible & ~U_border) << 6) | ((accessible & ~L_border) << 1) | ((accessible & ~R_border) >> 1) | ((accessible & ~D_border) >> 6));
+        changed = (new != accessible);
+        accessible = new;
+    }
+    // now run a tilefill, to get min tiles to reach islands ?
+    const U = (((accessible & ~U_border) << 6) & accessible & ~U_border) << 6;
+    const L = (((accessible & ~L_border) << 1) & accessible & ~L_border) << 1;
+    const R = (((accessible & ~R_border) >> 1) & accessible & ~R_border) >> 1;
+    const D = (((accessible & ~D_border) >> 6) & accessible & ~D_border) >> 6;
+    accessible |= U | L | R | D;
+    // run another floodfill, check which islands are reached...
+
+    _ = goal;
+}
+
+pub fn heuristic_gor(b: Board, comptime goal: u36) u8 {
+    // variant of heuristic3 with manually handling of the corner islands
+    if (goal != gor_tile) @compileError("use only on b023 for Gor's brand");
+    // Also consider situation where we need to replace stairs with a tile
+    const forward = move_by(b.gray, b.facing);
+    const stairs = if (b.stairs < 36) @as(u36, 1) << b.stairs else 0;
+    const have_tile = (b.pocket != 0) and (b.stairs -% 37 != b.pocket);
+    const excess = b.tiles & ~(goal | stairs); // stairs are always excess
+    const missing = goal & ~(b.tiles ^ stairs); // stairs don't count as a filling tile
+    // good facing if we can pick up excess or fill missing
+    // (since stairs are counted as excess, doesnt matter if they are also in missing)
+    const good_facing: u8 = @intCast(((excess >> forward) & 1) | if (have_tile) (missing >> forward) & 1 else 0);
+    //
+    const corner_TL: u36 = 0b100000_000000_000000_000000_000000_000000;
+    const corner_TR: u36 = 0b000001_000000_000000_000000_000000_000000;
+    const corner_BR: u36 = 0b000000_000000_000000_000000_000000_000001;
+    // for each corner tile we need to place and remove another tile to reach it
+    // for a total of 12 additional actions (3 corners * 1 tile * (place + remove) * (get in position + Z))
+    // take those into account along with facing one of those tiles
+    //  if the corner still exists and ...
+    // these access vars are 0 if no longer necessary
+    const TL_access = ((b.tiles & corner_TL) >> 6) * 0b010000_1;
+    const TR_access = ((b.tiles & corner_TR) >> 6) * 0b000010_000001;
+    const BR_access = (b.tiles & corner_BR) * 0b000001_000010;
+    var access_cost: u8 = 0;
+    if (TL_access != 0) {
+        const facing: u8 = @intCast((TL_access >> forward) & 1);
+        // TL has not yet been picked up
+        // TL itself is tracked in heuristic (as part of `excess`) but not the access tiles
+        if (TL_access & b.tiles == 0) {
+            // TL is an island
+            access_cost += 4 - facing; // need to fill and later remove access
+            // can be decreased by good_facing; handle here or all in a group
+        } else {
+            // TL is no longer an island
+            // shouldn't remove access until TL is gone
+            // facing the access tile isn't good, though it's tracked as such as part of `excess`
+            // so we need to add 1 if facing instead of subtracting for total o
+            // if facing an access tile add 1
+            access_cost += facing;
+        }
+    } else {} // TL has been removed: access tile can be tracked as normal (as part of `excess`)
+    if (TR_access != 0) {
+        const facing: u8 = @intCast((TR_access >> forward) & 1);
+        if (TR_access & b.tiles == 0) {
+            access_cost += 4 - facing;
+        } else {
+            access_cost += facing;
+        }
+    }
+    if (BR_access != 0) {
+        const facing: u8 = @intCast((BR_access >> forward) & 1);
+        if (BR_access & b.tiles == 0) {
+            access_cost += 4 - facing;
+        } else {
+            access_cost += facing;
+        }
+    }
+    return 2 * (@popCount(excess) + @popCount(missing)) - good_facing + access_cost;
+}
+
+test "gor heuristic" {
+    const start = Board{
+        .tiles = 0b101100_000000_000000_000000_000000_000000, // checking TL corner access
+        .gray = 32,
+        .facing = .R,
+        .pocket = 3, // Tile Stairs Tile
+        .stairs = 38,
+    };
+    // face an access tile
+    const s2 = start.do_action(.L).?;
+    try std.testing.expect(heuristic_gor(s2, gor_tile) == heuristic_gor(start, gor_tile) - 1);
+    // fill an access tile
+    const s3 = s2.do_action(.Z).?;
+    try std.testing.expect(heuristic_gor(s3, gor_tile) == heuristic_gor(s2, gor_tile) - 1);
+    // face an excess (non-access) tile
+    const s4 = s3.do_action(.L).?;
+    try std.testing.expect(heuristic_gor(s4, gor_tile) == heuristic_gor(s3, gor_tile) - 1);
+    // take an excess tile
+    const s5 = s4.do_action(.Z).?;
+    try std.testing.expect(heuristic_gor(s5, gor_tile) == heuristic_gor(s4, gor_tile) - 1);
+    // move
+    const s6 = s5.do_action(.R).?;
+    try std.testing.expect(heuristic_gor(s6, gor_tile) == heuristic_gor(s5, gor_tile));
+    // move
+    const s7 = s6.do_action(.R).?;
+    try std.testing.expect(heuristic_gor(s7, gor_tile) == heuristic_gor(s6, gor_tile));
+    // face a used access tile (now just excess)
+    const s8 = s7.do_action(.L).?;
+    try std.testing.expect(heuristic_gor(s8, gor_tile) == heuristic_gor(s7, gor_tile) - 1);
+    // take a used access tile (now just excess)
+    const s9 = s8.do_action(.Z).?;
+    try std.testing.expect(heuristic_gor(s9, gor_tile) == heuristic_gor(s8, gor_tile) - 1);
+    //
+    try std.testing.expect(heuristic_gor(s3.do_action(.R).?, gor_tile) == heuristic_gor(s3, gor_tile));
+    try std.testing.expect(heuristic_gor(s3.do_action(.R).?.do_action(.L).?, gor_tile) == heuristic_gor(s3, gor_tile));
+    const s3_rz = s3.do_action(.R).?.do_action(.Z).?;
+    try std.testing.expect(s3_rz.stairs == 31);
+    try std.testing.expect(s3_rz.gray == 32);
+    try std.testing.expect(s3_rz.facing == .R);
+    std.debug.print("{} ", .{heuristic_gor(s3, gor_tile)});
+    std.debug.print("{} ", .{heuristic_gor(s3_rz, gor_tile)});
+    // TODO
+    try std.testing.expect(heuristic_gor(s3_rz, gor_tile) == heuristic_gor(s3, gor_tile) + 1);
+}
+
 // B023 start (Stairs appear as a tile here)
 const start_tiles = 0b100101_000110_011111_111110_011000_100001;
 pub const b023 = Board{
