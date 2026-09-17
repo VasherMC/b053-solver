@@ -9,10 +9,10 @@ const wings = false;
 
 pub const BT = @typeInfo(Board).@"struct".backing_integer.?;
 /// Least significant to most significant bits
-pub const Board = packed struct(u58) {
+pub const Board = packed struct(u54) {
     facing: Facing,
     gray: Pos,
-    pocket: u8, // count of tiles (Endless Rod) - only need u5 for the 18 tiles on B023
+    pocket: u4, // count of tiles (Endless Rod) - only need u4 (can pick up at most (18+1-4)=15 on B023)
     tiles: u36, // bit set = tile (or stairs)
     stairs: u6, // 0-35 for a specific tile; 36+ is its position in the pocket
 
@@ -84,10 +84,10 @@ pub const Board = packed struct(u58) {
                 if (forward == b.gray) unreachable; // same tile denotes would bump
                 const f_tile = b.at(forward);
                 // pickup if a tile is there
-                // place if its empty
+                // place if its empty, unless we would be placing our last tile as stairs from endless rod
                 return switch (f_tile) {
                     1 => if (endless or b.pocket == 0) b.pickup(forward) else null,
-                    0 => if (b.pocket > 0) b.place(forward) else null,
+                    0 => if (b.pocket > 0 and (!endless or b.pocket > 1 or b.stairs != 37)) b.place(forward) else null,
                 };
             },
             else => {
@@ -230,7 +230,14 @@ test "b023_start" {
 test "gor" {
     if (endless) {
         try std.testing.expect(b023.do_actions("ZLZRRRZRUZUZDDZDZUUZLULZDLUZDRUZDRRDZLUZLRZLUZULZLZRRLZDDLZRDZLZURRZDZDLUZRZDZLLZUZRZDZDRLZUZ").?.tiles == gor_tile);
+        try std.testing.expect(b023.do_actions("RZUURZRDUZDZDUZDZDZUUDZULULZDZRZLUZDZLUZDRZUZULZLZRRLZDRZDLZDDZUZDLZLUZRZDZRZLDRZRUZ").?.tiles == gor_tile);
     }
+}
+
+test "dont-place-bottom-stairs" {
+    const start = b023.do_actions("URUZ").?;
+    if (endless) try std.testing.expect(start.do_action(.Z) == null);
+    if (!endless) try std.testing.expect(start.do_action(.Z).?.stairs == 32);
 }
 
 test "dev_start" {
@@ -238,15 +245,19 @@ test "dev_start" {
         .tiles = dev_tile,
         .gray = 6,
         .facing = .U,
-        .pocket = 1,
-        .stairs = 37, // in pocket
+        .pocket = if (endless) 2 else 1,
+        .stairs = if (endless) 38 else 37, // top of pocket but not bottom if endless
     };
-    if (endless) try std.testing.expect(dev_position.do_action(.Z).?.pocket == 2);
-    if (endless) try std.testing.expect(dev_position.do_action(.Z).?.stairs == 37);
-    try std.testing.expect(dev_position.do_action(.D).?.gray == 0);
-    try std.testing.expect(dev_position.do_action(.D).?.do_action(.L).?.do_action(.Z).?.pocket == 0);
-    try std.testing.expect(dev_position.do_action(.D).?.do_action(.L).?.do_action(.Z).?.stairs == 2);
-    try std.testing.expect(dev_position.do_action(.D).?.do_action(.L).?.do_action(.Z).?.gray == 1);
+    if (endless) try std.testing.expect(dev_position.do_action(.Z).?.pocket == 3);
+    if (endless) try std.testing.expect(dev_position.do_action(.Z).?.stairs == 38);
+    if (!endless) try std.testing.expect(dev_position.do_action(.Z) == null); // pocket is full at 1
+    const dev_D = dev_position.do_action(.D).?;
+    const dev_DL = dev_D.do_action(.L).?;
+    const dev_DLZ = dev_DL.do_action(.Z).?;
+    try std.testing.expect(dev_D.gray == 0);
+    try std.testing.expect(dev_DLZ.pocket == if (endless) 1 else 0);
+    try std.testing.expect(dev_DLZ.stairs == 2);
+    try std.testing.expect(dev_DLZ.gray == 1);
 }
 
 /// Check whether states are effectively duplicates
