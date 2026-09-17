@@ -5,10 +5,13 @@ const brand = @import("b023.zig");
 
 // The desired end state
 // one of add, gor, lev, cif, dev, trailer
-const goal_tile = brand.trailer_tile;
+const goal_tile = brand.gor_tile;
 
 // Limit move depth, if a solution is known to exist within a specific move count
-const MAX_DEPTH: u8 = 33;
+const MAX_DEPTH: u8 = 85;
+// Gor solution exists at 84 (+X)
+// original run maxep 94 was killed at hdiff 30 (maxdepth ~71) by OOM (72 GB)
+// need a better heuristic that tracks reachability/accessibility of diff locations
 
 const Board = brand.Board;
 const BT = brand.BT;
