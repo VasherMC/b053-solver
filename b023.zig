@@ -274,6 +274,12 @@ pub fn heuristic_gor_nowings(b: Board, comptime goal: u36) u8 {
     // (since stairs are counted as excess, doesnt matter if they are also in missing)
     const good_facing: u8 = @intCast(((excess >> forward) & 1) | if (have_tile) (missing >> forward) & 1 else 0);
     //
+    return 2 * (@popCount(excess) + @popCount(missing)) - good_facing + corner_access_cost(b.tiles, stairs, forward, goal);
+}
+
+fn corner_access_cost(tiles: u36, stairs: u36, forward: Pos, comptime goal: u36) u8 {
+    // based on the premise that tiles to access these corners are not present in the goal
+    const diff = tiles ^ goal;
     const corner_TL: u36 = 0b100000_000000_000000_000000_000000_000000;
     const corner_TR: u36 = 0b000001_000000_000000_000000_000000_000000;
     const corner_BR: u36 = 0b000000_000000_000000_000000_000000_000001;
@@ -282,30 +288,31 @@ pub fn heuristic_gor_nowings(b: Board, comptime goal: u36) u8 {
     // take those into account along with facing one of those tiles
     //  if the corner still exists and ...
     // these access vars are 0 if no longer necessary
-    const TL_access = ((b.tiles & corner_TL) >> 6) * 0b010000_1;
-    const TR_access = ((b.tiles & corner_TR) >> 6) * 0b000010_000001;
-    const BR_access = (b.tiles & corner_BR) * 0b000001_000010;
+    // if the stairs are in a corner, we also need to reach that corner no matter what
+    const TL_access = (((diff | stairs) & corner_TL) >> 6) * 0b010000_1;
+    const TR_access = (((diff | stairs) & corner_TR) >> 6) * 0b000010_000001;
+    const BR_access = ((diff | stairs) & corner_BR) * 0b000001_000010;
+    // while stairs are included in `tiles` they cannot be used as access
+    //  (given there is no button and they are already open)
     var access_cost: u8 = 0;
     if (TL_access != 0) {
         const facing: u8 = @intCast((TL_access >> forward) & 1);
         // TL has not yet been picked up
         // TL itself is tracked in heuristic (as part of `excess`) but not the access tiles
-        if (TL_access & b.tiles == 0) {
+        if (TL_access & tiles & ~stairs == 0) {
             // TL is an island
             access_cost += 4 - facing; // need to fill and later remove access
-            // can be decreased by good_facing; handle here or all in a group
         } else {
             // TL is no longer an island
-            // shouldn't remove access until TL is gone
+            // shouldn't remove access until TL is gone/handled
             // facing the access tile isn't good, though it's tracked as such as part of `excess`
-            // so we need to add 1 if facing instead of subtracting for total o
-            // if facing an access tile add 1
+            // so we need to add 1 if facing an access tile to counteract the initial subtraction
             access_cost += facing;
         }
-    } else {} // TL has been removed: access tile can be tracked as normal (as part of `excess`)
+    } else {} // TL has been handled: access tile can be tracked as normal (as part of `excess`)
     if (TR_access != 0) {
         const facing: u8 = @intCast((TR_access >> forward) & 1);
-        if (TR_access & b.tiles == 0) {
+        if (TR_access & tiles & ~stairs == 0) {
             access_cost += 4 - facing;
         } else {
             access_cost += facing;
@@ -313,13 +320,13 @@ pub fn heuristic_gor_nowings(b: Board, comptime goal: u36) u8 {
     }
     if (BR_access != 0) {
         const facing: u8 = @intCast((BR_access >> forward) & 1);
-        if (BR_access & b.tiles == 0) {
+        if (BR_access & tiles & ~stairs == 0) {
             access_cost += 4 - facing;
         } else {
             access_cost += facing;
         }
     }
-    return 2 * (@popCount(excess) + @popCount(missing)) - good_facing + access_cost;
+    return access_cost;
 }
 
 test "gor heuristic" {
