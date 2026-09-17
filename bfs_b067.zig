@@ -10,6 +10,8 @@ const goal_tile = brand.bee_tile;
 const MAX_DEPTH: u8 = 100;
 // Bee with endless+wings+sword is <100
 
+const heuristic = brand.heuristic2;
+
 const Board = brand.Board;
 const Action = brand.Action;
 const Pos = brand.Pos;
@@ -105,7 +107,7 @@ fn item_lessThan(_: void, a: Item, b: Item) bool {
 
 fn prune(result: Board, depth: u8) bool {
     // ignore if the goal state is definitely not reachable within MAX_DEPTH total steps
-    return brand.heuristic2(result, goal_tile) + depth > MAX_DEPTH;
+    return heuristic(result, goal_tile) + depth > MAX_DEPTH;
 }
 
 const duplicate_stats = false;
@@ -190,7 +192,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
     std.debug.print("\nDone\n", .{});
 }
 
-const min_heuristic = brand.heuristic2(start, goal_tile);
+const min_heuristic = heuristic(start, goal_tile);
 
 /// Backtrace path through state space
 fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX_DEPTH]std.ArrayList(Item)) !void {
@@ -220,7 +222,7 @@ fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX
         for (bs) |bv| {
             if (bv != Board.invalid) {
                 if (bv == start) return;
-                const hd = (d - 1) + brand.heuristic2(bv, goal_tile) - min_heuristic;
+                const hd = (d - 1) + heuristic(bv, goal_tile) - min_heuristic;
                 const idx = std.sort.binarySearch(Item, finalized[hd][d - 1].items, bv, board_item_cmp);
                 if (idx) |i| {
                     cur = finalized[hd][d - 1].items[i];
@@ -237,7 +239,7 @@ fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX
 
 fn best_first_search(alloc: std.mem.Allocator) !void {
     // grouped by heuristic (minimum total moves remaining) and move depth
-    // we take `depth + brand.heuristic2(b, goal) - brand.heuristic2(start, goal)` and `depth`
+    // we take `depth + heuristic(b, goal) - heuristic(start, goal)` and `depth`
     // (with the first number equivalently representing 'moves executed not required by the heuristic')
     // and prioritize exploring states with lower heuristic
     // starting state is put in bucket (0,0)
@@ -285,7 +287,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                                 }
                             } else if (prune(result, @as(u8, @intCast(depth)))) continue;
                             if (depth == MAX_DEPTH) continue;
-                            const h = brand.heuristic2(result, goal_tile);
+                            const h = heuristic(result, goal_tile);
                             const hd = depth + h - min_heuristic;
                             if (hd != hdiff) continue;
                             // We don't deduplicate yet because it's unordered
@@ -317,7 +319,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                     if (duplicate_stats) stats_dupe_depth[0] += 1;
                     continue;
                 }
-                const h = brand.heuristic2(b.b, goal_tile);
+                const h = heuristic(b.b, goal_tile);
                 std.debug.assert((depth + h - min_heuristic) == hdiff);
                 // Check in previous buckets
                 for (0..depth / 2) |check| {
@@ -370,7 +372,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
             //                    .D => .D,
             //                },
             //            }, .cant_z = result.cant_Z(a) };
-            //            const h = brand.heuristic2(result, goal_tile);
+            //            const h = heuristic(result, goal_tile);
             //            const hd = depth + 1 + h - min_heuristic;
             //            std.debug.assert(hd >= hdiff);
             //            std.debug.assert(hd - hdiff <= 2);

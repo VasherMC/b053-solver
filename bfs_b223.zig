@@ -9,6 +9,8 @@ const brand = @import("b223.zig");
 // (the second solution found requires an additional falling move X due to wings)
 const MAX_DEPTH: u8 = 42;
 
+const heuristic = brand.heuristic;
+
 const Board = brand.Board;
 const Action = brand.Action;
 const Pos = brand.Pos;
@@ -97,7 +99,7 @@ fn item_lessThan(_: void, a: Item, b: Item) bool {
 
 fn prune(result: Board, depth: u8) bool {
     // ignore if the goal state is definitely not reachable within MAX_DEPTH total steps
-    return brand.heuristic(result.tiles) + depth > MAX_DEPTH;
+    return heuristic(result.tiles) + depth > MAX_DEPTH;
 }
 
 const duplicate_stats = true;
