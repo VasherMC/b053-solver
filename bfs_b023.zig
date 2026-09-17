@@ -13,6 +13,8 @@ const MAX_DEPTH: u8 = 85;
 // original run maxep 94 was killed at hdiff 30 (maxdepth ~71) by OOM (72 GB)
 // need a better heuristic that tracks reachability/accessibility of diff locations
 
+const heuristic = brand.heuristic_gor_nowings;
+
 const Board = brand.Board;
 const BT = brand.BT;
 const Action = brand.Action;
@@ -103,7 +105,7 @@ fn item_lessThan(_: void, a: Item, b: Item) bool {
 
 fn prune(result: Board, depth: u8) bool {
     // ignore if the goal state is definitely not reachable within MAX_DEPTH total steps
-    return brand.heuristic2(result, goal_tile) + depth > MAX_DEPTH;
+    return heuristic(result, goal_tile) + depth > MAX_DEPTH;
 }
 
 const duplicate_stats = false;
@@ -188,7 +190,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
     std.debug.print("\nDone\n", .{});
 }
 
-const min_heuristic = brand.heuristic2(start, goal_tile);
+const min_heuristic = heuristic(start, goal_tile);
 
 /// Backtrace path through state space
 fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX_DEPTH]std.ArrayList(Item)) !void {
@@ -216,7 +218,7 @@ fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX
         })});
         b = cur.b.reverse(cur.p);
         if (b == start) return;
-        const hd = (d - 1) + brand.heuristic2(b, goal_tile) - min_heuristic;
+        const hd = (d - 1) + heuristic(b, goal_tile) - min_heuristic;
         const idx = std.sort.binarySearch(Item, finalized[hd][d - 1].items, b, board_item_cmp).?;
         cur = finalized[hd][d - 1].items[idx];
         d -= 1;
@@ -225,9 +227,11 @@ fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX
 
 fn best_first_search(alloc: std.mem.Allocator) !void {
     // grouped by heuristic (minimum total moves remaining) and move depth
-    // we take `depth + brand.heuristic2(b, goal) - brand.heuristic2(start, goal)` and `depth`
+    // we take `depth + heuristic(b, goal) - heuristic(start, goal)` and `depth`
     // (with the first number equivalently representing 'moves executed not required by the heuristic')
     // and prioritize exploring states with lower heuristic
+    //  NOTE: as an implementation detail, requires the heuristic is smooth
+    //        (a move must only increase/decrease by 1)
     // starting state is put in bucket (0,0)
     //   if we can make a move that moves toward the solution it goes in (0, 1)
     //          (move depth increased, heuristic decreased)
@@ -273,7 +277,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                                 }
                             } else if (prune(result, @as(u8, @intCast(depth)))) continue;
                             if (depth == MAX_DEPTH) continue;
-                            const h = brand.heuristic2(result, goal_tile);
+                            const h = heuristic(result, goal_tile);
                             const hd = depth + h - min_heuristic;
                             if (hd != hdiff) continue;
                             // We don't deduplicate yet because it's unordered
@@ -305,7 +309,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                     if (duplicate_stats) stats_dupe_depth[0] += 1;
                     continue;
                 }
-                const h = brand.heuristic2(b.b, goal_tile);
+                const h = heuristic(b.b, goal_tile);
                 std.debug.assert((depth + h - min_heuristic) == hdiff);
                 // Check in previous buckets
                 for (0..depth / 2) |check| {
