@@ -25,6 +25,13 @@ const endless = true;
 const wings = true;
 const sword = true;
 
+// used to check if we win instead of dying when beaver knocks us into a hole
+const root_goal = blk: {
+    const root = @import("root");
+    if (@hasDecl(root, "goal")) break :blk root.goal;
+    break :blk 0;
+};
+
 pub const BT = @typeInfo(Board).@"struct".backing_integer.?;
 /// Least significant to most significant bits
 pub const Board = packed struct(if (endless) u64 else u60) {
@@ -53,7 +60,11 @@ pub const Board = packed struct(if (endless) u64 else u60) {
     }
     inline fn move_beaver(b: Board, dir: Action) ?Board {
         const new_p = move_by_a(b.beaver.p, dir);
-        if (new_p == b.gray) return null; // beaver hits if able
+        if (new_p == b.gray) {
+            if (wings and b.at(b.gray) == 0 and b.tiles == root_goal and b.stairs > 36) {
+                // we are hovering and beaver causes us to fall immediately
+            } else return null; // beaver hits if able
+        }
         // beaver moves or not
         return .{
             .facing = b.facing,
