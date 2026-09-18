@@ -196,7 +196,7 @@ const min_heuristic = heuristic(start, goal_tile);
 
 /// Backtrace path through state space
 fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX_DEPTH]std.ArrayList(Item)) !void {
-    std.debug.print("End state: {}\n", .{end.b});
+    std.debug.print("End state: {}\n", .{end.b.do_action(last_move)});
     std.debug.print("Found path (reversed): {c}", .{@as(u8, switch (last_move) {
         .Z => 'Z',
         .U => 'U',
