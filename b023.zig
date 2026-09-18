@@ -215,9 +215,10 @@ pub fn heuristic3(b: Board, comptime goal: u36) u8 {
     return 2 * (@popCount(excess) + @popCount(missing)) - good_facing;
 }
 
-test "heuristic3" {
+test "heuristic3 test (with endless)" {
     if (!endless) return error.SkipZigTest;
     const H = heuristic3;
+    // basic case where stairs occupy a goal tile: [.S###.] -> [.###..]
     const goal: u36 = 0b000000_000000_000000_000000_000000_011100;
     const expect_excess: u36 = 0b0000_000000_000000_000000_010010;
     const expect_missing: u36 = 0b000_000000_000000_000000_010000;
@@ -242,7 +243,6 @@ test "heuristic3" {
     const a5 = a4.do_action(.L).?;
     const a6 = a5.do_action(.Z).?;
     try std.testing.expect(H(a1, goal) == 5); // face stairs
-    std.debug.print("{} {}\n", .{ H(a2, goal), a2 });
     try std.testing.expect(H(a2, goal) == 4); // pickup stairs; have 1 excess 1 missing; facing missing but can't place
     try std.testing.expect(H(a3, goal) == 3); // face excess
     try std.testing.expect(H(a4, goal) == 2); // pickup tile; have 1 missing, not facing
@@ -365,52 +365,51 @@ fn corner_access_cost(tiles: u36, stairs: u36, forward: Pos, comptime goal: u36)
     return access_cost;
 }
 
-test "gor heuristic" {
-    if (endless and !wings) {
-        const H = heuristic_gor_nowings;
-        const start = Board{
-            .tiles = 0b101100_000000_000000_000000_000000_000000, // checking TL corner access
-            .gray = 32,
-            .facing = .R,
-            .pocket = 3, // Tile Stairs Tile
-            .stairs = 38,
-        };
-        // face an access tile
-        const s2 = start.do_action(.L).?;
-        try std.testing.expect(H(s2, gor_tile) == H(start, gor_tile) - 1);
-        // fill an access tile
-        const s3 = s2.do_action(.Z).?;
-        try std.testing.expect(H(s3, gor_tile) == H(s2, gor_tile) - 1);
-        // face an excess (non-access) tile
-        const s4 = s3.do_action(.L).?;
-        try std.testing.expect(H(s4, gor_tile) == H(s3, gor_tile) - 1);
-        // take an excess tile
-        const s5 = s4.do_action(.Z).?;
-        try std.testing.expect(H(s5, gor_tile) == H(s4, gor_tile) - 1);
-        // move
-        const s6 = s5.do_action(.R).?;
-        try std.testing.expect(H(s6, gor_tile) == H(s5, gor_tile));
-        // move
-        const s7 = s6.do_action(.R).?;
-        try std.testing.expect(H(s7, gor_tile) == H(s6, gor_tile));
-        // face a used access tile (now just excess)
-        const s8 = s7.do_action(.L).?;
-        try std.testing.expect(H(s8, gor_tile) == H(s7, gor_tile) - 1);
-        // take a used access tile (now just excess)
-        const s9 = s8.do_action(.Z).?;
-        try std.testing.expect(H(s9, gor_tile) == H(s8, gor_tile) - 1);
-        //
-        try std.testing.expect(H(s3.do_action(.R).?, gor_tile) == H(s3, gor_tile));
-        try std.testing.expect(s3.do_action(.R).?.do_action(.L).? == s3);
-        const s3_lr = s3.do_action(.L).?.do_action(.R).?;
-        try std.testing.expect(s3 != s3_lr);
-        try std.testing.expect(H(s3, gor_tile) == H(s3_lr, gor_tile));
-        const s3_rz = s3.do_action(.R).?.do_action(.Z).?;
-        try std.testing.expect(s3_rz.stairs == 31);
-        try std.testing.expect(s3_rz.gray == 32);
-        try std.testing.expect(s3_rz.facing == .R);
-        try std.testing.expect(H(s3_rz, gor_tile) == H(s3, gor_tile) + 1);
-    }
+test "gor heuristic (endless + no wings)" {
+    if (!endless or wings) return error.SkipZigTest;
+    const H = heuristic_gor_nowings;
+    const start = Board{
+        .tiles = 0b101100_000000_000000_000000_000000_000000, // checking TL corner access
+        .gray = 32,
+        .facing = .R,
+        .pocket = 3, // Tile Stairs Tile
+        .stairs = 38,
+    };
+    // face an access tile
+    const s2 = start.do_action(.L).?;
+    try std.testing.expect(H(s2, gor_tile) == H(start, gor_tile) - 1);
+    // fill an access tile
+    const s3 = s2.do_action(.Z).?;
+    try std.testing.expect(H(s3, gor_tile) == H(s2, gor_tile) - 1);
+    // face an excess (non-access) tile
+    const s4 = s3.do_action(.L).?;
+    try std.testing.expect(H(s4, gor_tile) == H(s3, gor_tile) - 1);
+    // take an excess tile
+    const s5 = s4.do_action(.Z).?;
+    try std.testing.expect(H(s5, gor_tile) == H(s4, gor_tile) - 1);
+    // move
+    const s6 = s5.do_action(.R).?;
+    try std.testing.expect(H(s6, gor_tile) == H(s5, gor_tile));
+    // move
+    const s7 = s6.do_action(.R).?;
+    try std.testing.expect(H(s7, gor_tile) == H(s6, gor_tile));
+    // face a used access tile (now just excess)
+    const s8 = s7.do_action(.L).?;
+    try std.testing.expect(H(s8, gor_tile) == H(s7, gor_tile) - 1);
+    // take a used access tile (now just excess)
+    const s9 = s8.do_action(.Z).?;
+    try std.testing.expect(H(s9, gor_tile) == H(s8, gor_tile) - 1);
+    //
+    try std.testing.expect(H(s3.do_action(.R).?, gor_tile) == H(s3, gor_tile));
+    try std.testing.expect(s3.do_action(.R).?.do_action(.L).? == s3);
+    const s3_lr = s3.do_action(.L).?.do_action(.R).?;
+    try std.testing.expect(s3 != s3_lr);
+    try std.testing.expect(H(s3, gor_tile) == H(s3_lr, gor_tile));
+    const s3_rz = s3.do_action(.R).?.do_action(.Z).?;
+    try std.testing.expect(s3_rz.stairs == 31);
+    try std.testing.expect(s3_rz.gray == 32);
+    try std.testing.expect(s3_rz.facing == .R);
+    try std.testing.expect(H(s3_rz, gor_tile) == H(s3, gor_tile) + 1);
 }
 
 // B023 start (Stairs appear as a tile here)
@@ -423,7 +422,7 @@ pub const b023 = Board{
     .stairs = 32,
 };
 
-test "b023_start" {
+test "basic sanity checks from b023_start" {
     try std.testing.expect(b023.at(0) == 1);
     try std.testing.expect(b023.at(1) == 0);
     try std.testing.expect(b023.at(15) == 1);
@@ -439,20 +438,23 @@ test "b023_start" {
     try std.testing.expect(b023.do_action(.U).?.cant_Z(.U));
 }
 
-test "gor" {
-    if (endless) {
-        try std.testing.expect(b023.do_actions("ZLZRRRZRUZUZDDZDZUUZLULZDLUZDRUZDRRDZLUZLRZLUZULZLZRRLZDDLZRDZLZURRZDZDLUZRZDZLLZUZRZDZDRLZUZ").?.tiles == gor_tile);
-        try std.testing.expect(b023.do_actions("RZUURZRDUZDZDUZDZDZUUDZULULZDZRZLUZDZLUZDRZUZULZLZRRLZDRZDLZDDZUZDLZLUZRZDZRZLDRZRUZ").?.tiles == gor_tile);
-    }
+test "gor action sequences (endless)" {
+    if (!endless) return error.SkipZigTest;
+    // manually found
+    try std.testing.expect(b023.do_actions("ZLZRRRZRUZUZDDZDZUUZLULZDLUZDRUZDRRDZLUZLRZLUZULZLZRRLZDDLZRDZLZURRZDZDLUZRZDZLLZUZRZDZDRLZUZ").?.tiles == gor_tile);
+    try std.testing.expect(b023.do_actions("RZUURZRDUZDZDUZDZDZUUDZULULZDZRZLUZDZLUZDRZUZULZLZRRLZDRZDLZDDZUZDLZLUZRZDZRZLDRZRUZ").?.tiles == gor_tile);
+    // solver found
+    try std.testing.expect(b023.do_actions("RUUZDZRZUZLZDLZRZUZURZLZLZLZRRZLZDZRZDZDZRZLLRZDZLLZLUZRRZDZDUZDRZRZLLZRZ").?.tiles == gor_tile);
 }
 
 test "dont-place-bottom-stairs" {
     const start = b023.do_actions("URUZ").?;
     if (endless) try std.testing.expect(start.do_action(.Z) == null);
+    // without endless rod we may need to shuffle the stairs around
     if (!endless) try std.testing.expect(start.do_action(.Z).?.stairs == 32);
 }
 
-test "dev_start" {
+test "basic sanity checks from dev_start" {
     const dev_position = Board{
         .tiles = dev_tile,
         .gray = 6,
