@@ -206,13 +206,49 @@ pub fn heuristic3(b: Board, comptime goal: u36) u8 {
     // and whether we can actually place in our facing direction
     const forward = move_by(b.gray, b.facing);
     const stairs = if (b.stairs < 36) @as(u36, 1) << b.stairs else 0;
-    const have_tile = (b.pocket != 0) and (b.stairs -% 37 != b.pocket);
+    const have_tile = (b.pocket != 0) and (b.stairs -% 36 != b.pocket);
     const excess = (b.tiles & ~goal) | stairs; // stairs are always excess
     const missing = goal & ~(b.tiles ^ stairs); // stairs don't count as a filling tile
     // good facing if we can pick up excess or fill missing
     // (since stairs are counted as excess, doesnt matter if they are also in missing)
-    const good_facing = ((excess >> forward) & 1) | if (have_tile) (missing >> forward) & 1 else 0;
+    const good_facing: u8 = @intCast(((excess >> forward) & 1) | if (have_tile) (missing >> forward) & 1 else 0);
     return 2 * (@popCount(excess) + @popCount(missing)) - good_facing;
+}
+
+test "heuristic3" {
+    if (!endless) return error.SkipZigTest;
+    const H = heuristic3;
+    const goal: u36 = 0b000000_000000_000000_000000_000000_011100;
+    const expect_excess: u36 = 0b0000_000000_000000_000000_010010;
+    const expect_missing: u36 = 0b000_000000_000000_000000_010000;
+    _ = expect_excess;
+    _ = expect_missing;
+    const start = Board{
+        .tiles = 0b000000_000000_000000_000000_000000_011110,
+        .gray = 2,
+        .facing = .R,
+        .stairs = 4,
+        .pocket = 0,
+    };
+    try std.testing.expect(start.do_action(.R) != null);
+    try std.testing.expect(start.do_action(.R).?.gray == 1);
+    try std.testing.expect(start.do_action(.R).?.gray == 1);
+    try std.testing.expect(H(start, goal) == 5);
+    try std.testing.expect(H(start.do_action(.R).?, goal) == 6); // no longer facing good
+    const a1 = start.do_action(.L).?;
+    const a2 = a1.do_action(.Z).?;
+    const a3 = a2.do_action(.R).?;
+    const a4 = a3.do_action(.Z).?;
+    const a5 = a4.do_action(.L).?;
+    const a6 = a5.do_action(.Z).?;
+    try std.testing.expect(H(a1, goal) == 5); // face stairs
+    std.debug.print("{} {}\n", .{ H(a2, goal), a2 });
+    try std.testing.expect(H(a2, goal) == 4); // pickup stairs; have 1 excess 1 missing; facing missing but can't place
+    try std.testing.expect(H(a3, goal) == 3); // face excess
+    try std.testing.expect(H(a4, goal) == 2); // pickup tile; have 1 missing, not facing
+    try std.testing.expect(H(a5, goal) == 1); // face missing, have tile to place
+    try std.testing.expect(H(a6, goal) == 0); // filled missing
+    try std.testing.expect(a6.tiles == goal);
 }
 
 pub fn heuristic4(b: Board, comptime goal: u36) u8 {
@@ -267,7 +303,7 @@ pub fn heuristic_gor_nowings(b: Board, comptime goal: u36) u8 {
     // Also consider situation where we need to replace stairs with a tile
     const forward = move_by(b.gray, b.facing);
     const stairs = if (b.stairs < 36) @as(u36, 1) << b.stairs else 0;
-    const have_tile = (b.pocket != 0) and (b.stairs -% 37 != b.pocket);
+    const have_tile = (b.pocket != 0) and (b.stairs -% 36 != b.pocket);
     const excess = (b.tiles & ~goal) | stairs; // stairs are always excess
     const missing = goal & ~(b.tiles ^ stairs); // stairs don't count as a filling tile
     // good facing if we can pick up excess or fill missing
