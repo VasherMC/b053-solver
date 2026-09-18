@@ -355,6 +355,22 @@ pub fn heuristic2(b: Board, comptime goal: u36) u8 {
     return heuristic_2(b.tiles, if (forward == b.gray) 0 else @as(u36, 1) << forward, goal);
 }
 
+pub fn heuristic3(b: Board, comptime goal: u36) u8 {
+    // Also consider situation where we need to replace stairs with a tile,
+    // and whether we can actually place in our facing direction
+    const forward = move_by(b.gray, b.facing);
+    const stairs = if (b.stairs < 36) @as(u36, 1) << b.stairs else 0;
+    // can we place a tile to fill a missing spot
+    const can_place = (b.pocket != 0) and (b.stairs -% 36 != b.pocket) and (b.beaver.p != forward);
+    const excess = (b.tiles & ~goal) | stairs; // stairs are always excess
+    const missing = goal & ~(b.tiles ^ stairs); // stairs don't count as a filling tile
+    // good facing if we can pick up excess or fill missing
+    // (since stairs are counted as excess, doesnt matter if they are also in missing)
+    // if facing wall/statue, we can't pickup or place there
+    const good_facing: u8 = if (forward == b.gray) 0 else @intCast(((excess >> forward) & 1) | if (can_place) (missing >> forward) & 1 else 0);
+    return 2 * (@popCount(excess) + @popCount(missing)) - good_facing;
+}
+
 // B067 start (Stairs appear as a tile here)
 const start_tiles = 0b001110_011011_010001_010110_100011_111110;
 pub const b067 = Board{

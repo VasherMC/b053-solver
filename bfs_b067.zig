@@ -8,9 +8,9 @@ const goal_tile = brand.bee_tile;
 
 // Limit move depth, if a solution is known to exist within a specific move count
 const MAX_DEPTH: u8 = 100;
-// Bee with endless+wings+sword is <100
+// Bee with endless+wings+sword is 53?
 
-const heuristic = brand.heuristic2;
+const heuristic = brand.heuristic3;
 
 const Board = brand.Board;
 const Action = brand.Action;
