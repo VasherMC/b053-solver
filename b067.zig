@@ -27,13 +27,13 @@ const sword = true;
 
 pub const BT = @typeInfo(Board).@"struct".backing_integer.?;
 /// Least significant to most significant bits
-pub const Board = packed struct(u64) {
+pub const Board = packed struct(if (endless) u64 else u60) {
     facing: Facing,
     gray: Pos,
-    pocket: u5, // count of tiles (Endless Rod) - only need u5
+    pocket: if (endless) u5 else u1, // count of tiles (Endless Rod) - only need u5
     tiles: u36, // bit set = tile (or stairs)
     stairs: u6, // 0-35 for a specific tile; 36+ is its position in the pocket
-    beaver: packed struct {
+    beaver: packed struct(u9) {
         p: Pos, // 0-35 for a specific tile, 36+ for dead
         facing: Action, // ULDR or Z for stopped
     },
@@ -138,7 +138,9 @@ pub const Board = packed struct(u64) {
                         .tiles = b.tiles,
                         .pocket = b.pocket,
                         .stairs = b.stairs,
-                        .beaver = .{ .p = 36, .facing = b.beaver.facing },
+                        .beaver = .{ .p = 36, .facing = .Z },
+                        // we could retain facing state for simpler backtracking
+                        // however it's better to set facing so that we can deduplicate dead-beaver states
                     } else null; // can't pickup from under beaver
                 }
                 const f_tile = b.at(forward);
@@ -207,9 +209,19 @@ pub const Board = packed struct(u64) {
                 // handle unkilling beaver at forward_if_Z
                 var x = bv;
                 x.beaver.p = forward_if_Z; // facing remains same (is retained on death)
-                if (x.do_action(.Z) != b_end) @panic("bad logic");
-                result[s] = x;
-                s += 1;
+                for (std.enums.values(Action)) |f| {
+                    if (f != @as(Action, switch (b_end.facing) { // couldn't have sworded beaver facing away from gray
+                        .U => .U,
+                        .L => .L,
+                        .R => .R,
+                        .D => .D,
+                    })) {
+                        x.beaver.facing = f;
+                        if (x.do_action(.Z) != b_end) @panic("bad logic");
+                        result[s] = x;
+                        s += 1;
+                    }
+                }
             }
             // handle normal additions
             const pb = bv.reverse(a);
