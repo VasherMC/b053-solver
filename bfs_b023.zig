@@ -8,10 +8,11 @@ const brand = @import("b023.zig");
 const goal_tile = brand.gor_tile;
 
 // Limit move depth, if a solution is known to exist within a specific move count
-const MAX_DEPTH: u8 = 85;
-// Gor solution exists at 84 (+X)
-// original run maxep 94 was killed at hdiff 30 (maxdepth ~71) by OOM (72 GB)
-// need a better heuristic that tracks reachability/accessibility of diff locations
+const MAX_DEPTH: u8 = 74;
+// Gor solution exists at 73 (+X)
+// original run maxdep 94 was killed at hdiff 30 (maxdepth ~71) by OOM (72 GB) (vm compressor)
+// improved+custom heuristic tracking corner accessibility finds solution in 1900s in reasonable memory
+// additionally tracking stairs correctly brings down to 900s and lower RAM
 
 const heuristic = brand.heuristic_gor_nowings;
 
