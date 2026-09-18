@@ -10,7 +10,7 @@ const goal_tile = brand.bee_tile;
 const MAX_DEPTH: u8 = 100;
 // Bee with endless+wings+sword is 53?
 
-const heuristic = brand.heuristic3;
+const heuristic = brand.heuristic_bee_nowings;
 
 const Board = brand.Board;
 const Action = brand.Action;

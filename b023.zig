@@ -314,7 +314,7 @@ pub fn heuristic_gor_nowings(b: Board, comptime goal: u36) u8 {
 }
 
 fn corner_access_cost(tiles: u36, stairs: u36, forward: Pos, comptime goal: u36) u8 {
-    // based on the premise that tiles to access these corners are not present in the goal
+    // based on the premise that tiles to access these corners are different in the goal
     const diff = tiles ^ goal;
     const corner_TL: u36 = 0b100000_000000_000000_000000_000000_000000;
     const corner_TR: u36 = 0b000001_000000_000000_000000_000000_000000;

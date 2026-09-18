@@ -22,8 +22,8 @@ inline fn can_see(p1: Pos, p2: Pos) ?Action {
 }
 
 const endless = true;
-const wings = true;
-const sword = true;
+const wings = false;
+const sword = false;
 
 // used to check if we win instead of dying when beaver knocks us into a hole
 const root_goal = blk: {
@@ -380,6 +380,43 @@ pub fn heuristic3(b: Board, comptime goal: u36) u8 {
     // if facing wall/statue, we can't pickup or place there
     const good_facing: u8 = if (forward == b.gray) 0 else @intCast(((excess >> forward) & 1) | if (can_place) (missing >> forward) & 1 else 0);
     return 2 * (@popCount(excess) + @popCount(missing)) - good_facing;
+}
+
+// Bee needs to fill TR corner; access tiles are present but must be removed
+// so using corner cost lets us avoid removing them too early
+pub fn heuristic_bee_nowings(b: Board, comptime goal: u36) u8 {
+    // Also consider situation where we need to replace stairs with a tile,
+    // and whether we can actually place in our facing direction
+    const forward = move_by(b.gray, b.facing);
+    const stairs = if (b.stairs < 36) @as(u36, 1) << b.stairs else 0;
+    // can we place a tile to fill a missing spot
+    const can_place = (b.pocket != 0) and (b.stairs -% 36 != b.pocket) and (b.beaver.p != forward);
+    const excess = (b.tiles & ~goal) | stairs; // stairs are always excess
+    const missing = goal & ~(b.tiles ^ stairs); // stairs don't count as a filling tile
+    // good facing if we can pick up excess or fill missing
+    // (since stairs are counted as excess, doesnt matter if they are also in missing)
+    // if facing wall/statue, we can't pickup or place there
+    const good_facing: u8 = if (forward == b.gray) 0 else @intCast(((excess >> forward) & 1) | if (can_place) (missing >> forward) & 1 else 0);
+    return 2 * (@popCount(excess) + @popCount(missing)) - good_facing + corner_access_cost(b.tiles, stairs, forward, goal);
+}
+
+fn corner_access_cost(tiles: u36, stairs: u36, forward: Pos, comptime goal: u36) u8 {
+    // based on the premise that tiles to access these corners are different in the goal
+    const diff = tiles ^ goal;
+    const corner_TR: u36 = 0b000001_000000_000000_000000_000000_000000;
+    const TR_access = (((diff | stairs) & corner_TR) >> 6) * 0b000010_000001;
+    // while stairs are included in `tiles` they cannot be used as access
+    //  (given there is no button and they are already open)
+    var access_cost: u8 = 0;
+    if (TR_access != 0) {
+        const facing: u8 = @intCast((TR_access >> forward) & 1);
+        if (TR_access & tiles & ~stairs == 0) {
+            access_cost += 4 - facing;
+        } else {
+            access_cost += facing;
+        }
+    }
+    return access_cost;
 }
 
 // B067 start (Stairs appear as a tile here)
