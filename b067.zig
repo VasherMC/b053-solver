@@ -384,7 +384,7 @@ pub fn heuristic3(b: Board, comptime goal: u36) u8 {
 
 // Bee needs to fill TR corner; access tiles are present but must be removed
 // so using corner cost lets us avoid removing them too early
-pub fn heuristic_bee_nowings(b: Board, comptime goal: u36) u8 {
+pub fn heuristic_corners_nowings(b: Board, comptime goal: u36) u8 {
     // Also consider situation where we need to replace stairs with a tile,
     // and whether we can actually place in our facing direction
     const forward = move_by(b.gray, b.facing);
@@ -400,30 +400,42 @@ pub fn heuristic_bee_nowings(b: Board, comptime goal: u36) u8 {
     return 2 * (@popCount(excess) + @popCount(missing)) - good_facing + corner_access_cost(b.tiles, stairs, forward, goal);
 }
 
+test {
+    std.debug.print("bee heuristic {}\n", .{heuristic_corners_nowings(b067, bee_tile)});
+    std.debug.print("lev heuristic {}\n", .{heuristic_corners_nowings(b067, lev_tile)});
+}
+
 fn corner_access_cost(tiles: u36, stairs: u36, forward: Pos, comptime goal: u36) u8 {
     // based on the premise that tiles to access these corners are different in the goal
     const diff = tiles ^ goal;
-    const corner_TR: u36 = 0b000001_000000_000000_000000_000000_000000;
-    const corner_BL: u36 = 0b000000_000000_000000_000000_010000_000000;
-    const TR_access = (((diff | stairs) & corner_TR) >> 6) * 0b000010_000001;
-    const BL_access = (((diff | stairs) & corner_BL) >> 1) * 0b010000_001;
+    const corner_accesses = switch (goal) {
+        bee_tile => blk: {
+            const corner_TR: u36 = 0b000001_000000_000000_000000_000000_000000;
+            const corner_BL: u36 = 0b000000_000000_000000_000000_010000_000000;
+            const TR_access = (((diff | stairs) & corner_TR) >> 6) * 0b000010_000001;
+            const BL_access = (((diff | stairs) & corner_BL) >> 1) * 0b010000_001;
+            break :blk .{ TR_access, BL_access };
+        },
+        lev_tile => blk: {
+            const corner_TL: u36 = 0b100000_000000_000000_000000_000000_000000;
+            const corner_BL: u36 = 0b000000_000000_000000_000000_100000_000000; // above statue
+            const TL_access = (((diff | stairs) & corner_TL) >> 6) * 0b010000_1;
+            const BL_access = (((diff | stairs) & corner_BL) >> 1) * 0b100000_01;
+            break :blk .{ TL_access, BL_access };
+        },
+        else => @compileError("corners for goal not defined"),
+    };
     // while stairs are included in `tiles` they cannot be used as access
     //  (given there is no button and they are already open)
     var access_cost: u8 = 0;
-    if (TR_access != 0) {
-        const facing: u8 = @intCast((TR_access >> forward) & 1);
-        if (TR_access & tiles & ~stairs == 0) {
-            access_cost += 4 - facing;
-        } else {
-            access_cost += facing;
-        }
-    }
-    if (BL_access != 0) {
-        const facing: u8 = @intCast((BL_access >> forward) & 1);
-        if (BL_access & tiles & ~stairs == 0) {
-            access_cost += 4 - facing;
-        } else {
-            access_cost += facing;
+    inline for (corner_accesses) |access| {
+        if (access != 0) {
+            const facing: u8 = @intCast((access >> forward) & 1);
+            if (access & tiles & ~stairs == 0) {
+                access_cost += 4 - facing;
+            } else {
+                access_cost += facing;
+            }
         }
     }
     return access_cost;
