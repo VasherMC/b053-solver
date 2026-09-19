@@ -404,13 +404,23 @@ fn corner_access_cost(tiles: u36, stairs: u36, forward: Pos, comptime goal: u36)
     // based on the premise that tiles to access these corners are different in the goal
     const diff = tiles ^ goal;
     const corner_TR: u36 = 0b000001_000000_000000_000000_000000_000000;
+    const corner_BL: u36 = 0b000000_000000_000000_000000_010000_000000;
     const TR_access = (((diff | stairs) & corner_TR) >> 6) * 0b000010_000001;
+    const BL_access = (((diff | stairs) & corner_BL) >> 1) * 0b010000_001;
     // while stairs are included in `tiles` they cannot be used as access
     //  (given there is no button and they are already open)
     var access_cost: u8 = 0;
     if (TR_access != 0) {
         const facing: u8 = @intCast((TR_access >> forward) & 1);
         if (TR_access & tiles & ~stairs == 0) {
+            access_cost += 4 - facing;
+        } else {
+            access_cost += facing;
+        }
+    }
+    if (BL_access != 0) {
+        const facing: u8 = @intCast((BL_access >> forward) & 1);
+        if (BL_access & tiles & ~stairs == 0) {
             access_cost += 4 - facing;
         } else {
             access_cost += facing;
