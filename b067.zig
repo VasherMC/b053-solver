@@ -484,6 +484,14 @@ test "gor sequence (endless+wings)" {
     try std.testing.expect(g2.stairs > 36);
     try std.testing.expect(g2.tiles == gor_tile);
 }
+test "lev sequence (endless+wings)" {
+    if (!endless or !wings) return error.SkipZigTest;
+    // solver found
+    // sword is not helpful
+    const g1 = b067.do_actions("DZURDDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZURRZDDZLUZLZ").?;
+    try std.testing.expect(g1.stairs > 36);
+    try std.testing.expect(g1.tiles == lev_tile);
+}
 
 /// Check whether states are effectively duplicates
 /// Any of:
