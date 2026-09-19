@@ -484,6 +484,10 @@ test "gor sequence (endless)" {
     const g3 = b067.do_actions("RDDLZRUUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZRLZDZDRZUZLZUZLZLRZ").?;
     try std.testing.expect(g3.stairs > 36);
     try std.testing.expect(g3.tiles == gor_tile);
+    // solver found post-bugfix
+    const g4 = b067.do_actions("RDZUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZDUZRLZLZRZDDUZRLZ").?;
+    try std.testing.expect(g4.stairs > 36);
+    try std.testing.expect(g4.tiles == gor_tile);
 }
 test "gor sequence (endless+wings)" {
     if (!endless or !wings) return error.SkipZigTest;
