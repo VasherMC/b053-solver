@@ -22,8 +22,8 @@ inline fn can_see(p1: Pos, p2: Pos) ?Action {
 }
 
 const endless = true;
-const wings = false;
-const sword = false;
+const wings = true;
+const sword = true;
 
 // used to check if we win instead of dying when beaver knocks us into a hole
 const root_goal = blk: {
@@ -503,6 +503,10 @@ test "lev sequence (endless+wings)" {
     const g1 = b067.do_actions("DZURDDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZURRZDDZLUZLZ").?;
     try std.testing.expect(g1.stairs > 36);
     try std.testing.expect(g1.tiles == lev_tile);
+    // problem: solver did not find the shorter solution: bug where we stopped exploring too early
+    const g2 = b067.do_actions("DZRDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZRURZDDZLUZLZ").?;
+    try std.testing.expect(g2.stairs > 36);
+    try std.testing.expect(g2.tiles == lev_tile);
 }
 
 /// Check whether states are effectively duplicates

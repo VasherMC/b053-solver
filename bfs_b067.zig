@@ -4,13 +4,13 @@ const std = @import("std");
 const brand = @import("b067.zig");
 
 // The desired end state
-const goal_tile = brand.bee_tile;
+const goal_tile = brand.lev_tile;
 
 // Limit move depth, if a solution is known to exist within a specific move count
-const MAX_DEPTH: u8 = 100;
+const MAX_DEPTH: u8 = 60;
 // Bee with endless+wings+sword is 53?
 
-const heuristic = brand.heuristic_bee_nowings;
+const heuristic = brand.heuristic3;
 
 const Board = brand.Board;
 const Action = brand.Action;
@@ -267,8 +267,8 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
     }
     //
     var found = false;
+    var max_depth_so_far: usize = 1;
     for (finalized[0..], 0..) |*hgroup, hdiff| {
-        var seen_nonempty: bool = false;
         for (hgroup[1..], 1..) |*todo, depth| {
             // generate states from parents  (pull model)
             const parent_hd_min = hdiff -| 2;
@@ -305,9 +305,9 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                     }
                 }
             }
-            if (todo.items.len == 0 and seen_nonempty) break;
+            if (todo.items.len == 0 and depth > max_depth_so_far) break; // no further children can be generated at a greater depth
             if (todo.items.len == 0) continue;
-            seen_nonempty = true;
+            max_depth_so_far = @max(max_depth_so_far, depth);
             var stats_dupe_depth = if (duplicate_stats) [_]usize{0} ** MAX_DEPTH else {};
             std.debug.print("hdiff {} depth {}: generated {} states\n", .{ hdiff, depth, todo.items.len });
             std.sort.pdq(Item, todo.items, {}, item_lessThan);
