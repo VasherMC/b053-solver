@@ -459,6 +459,31 @@ test "b067_start" {
     try std.testing.expect(!b067.do_action(.R).?.do_action(.D).?.cant_Z(.D));
     if (wings and sword) try std.testing.expect(b067.do_actions("DZURLZ").?.do_action(.Z).?.beaver.p == 36);
 }
+test "gor sequence (endless)" {
+    if (!endless) return error.SkipZigTest;
+    // manually found
+    const g1 = b067.do_actions("RDZUZUUZRDZLDZUUDZRDZULZLZRZURLZLRZLLDZRZULLRRZDDLZRLUULZDZRLZURRLZDDZLZLUZRZDZDUZRZLDRZDUZ").?;
+    try std.testing.expect(g1.stairs > 36);
+    try std.testing.expect(g1.tiles == gor_tile);
+    const g2 = b067.do_actions("RDZUZUUZRDZLDZUUDZRDZULZLZRZURLZLRZLLDZRZULLRRZDDZLZRULZRULZDDZDDRUZLZDLUZRUZLZLRZDLUZ").?;
+    try std.testing.expect(g2.stairs > 36);
+    try std.testing.expect(g2.tiles == gor_tile);
+    // solver found
+    const g3 = b067.do_actions("RDDLZRUUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZRLZDZDRZUZLZUZLZLRZ").?;
+    try std.testing.expect(g3.stairs > 36);
+    try std.testing.expect(g3.tiles == gor_tile);
+}
+test "gor sequence (endless+wings)" {
+    if (!endless or !wings) return error.SkipZigTest;
+    // solver found
+    // sword is not helpful
+    const g1 = b067.do_actions("RUUZLLRZLLRZRDDZLZRZRZDZRUZUZDZDLLZLZRZUZLZLZUZRLZDDUZRZ").?;
+    try std.testing.expect(g1.stairs > 36);
+    try std.testing.expect(g1.tiles == gor_tile);
+    const g2 = b067.do_actions("RUUZLLRZLLRZRDDZLZRZRZDZLZLRZRRUZUZDZLLLZLZUZRZLZDZDUZRZ").?;
+    try std.testing.expect(g2.stairs > 36);
+    try std.testing.expect(g2.tiles == gor_tile);
+}
 
 /// Check whether states are effectively duplicates
 /// Any of:
