@@ -159,6 +159,9 @@ pub const Board = packed struct(u54) {
         }
         return p;
     }
+    pub fn holding_stairs(b: Board) bool {
+        return b.stairs >= 36;
+    }
 };
 
 pub const Action = enum(u3) { Z, U, L, R, D };

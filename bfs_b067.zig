@@ -166,7 +166,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
                 if (a == .Z and b.cant_z) continue; // we already computed this so may as well use it
                 if (b.b.do_action(a)) |result| {
                     if (result.tiles == goal_tile) {
-                        if (result.stairs > 35) {
+                        if (result.holding_stairs()) {
                             try trace_path(b, a, @intCast(depth), finalized[0 .. depth + 1]);
                             found = true;
                         }
@@ -281,7 +281,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                         if (a == .Z and b.cant_z) continue; // we already computed this so may as well use it
                         if (b.b.do_action(a)) |result| {
                             if (result.tiles == goal_tile) {
-                                if (result.stairs > 35) {
+                                if (result.holding_stairs()) {
                                     try trace_path_2(b, a, @intCast(depth - 1), finalized[0..]);
                                     found = true;
                                 }

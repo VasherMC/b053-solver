@@ -233,6 +233,10 @@ pub const Board = packed struct(u80) {
         }
         return p;
     }
+
+    pub fn holding_stairs(b: Board) bool {
+        return b.pocket == .Stairs;
+    }
 };
 
 pub const Action = enum(u3) { Z, U, L, R, D };
@@ -298,7 +302,7 @@ test "trailer burdenless" {
     }) |path| {
         const p = b053.do_actions(path).?;
         try std.testing.expect(p.tiles == trailer_tile);
-        try std.testing.expect(p.pocket == .Stairs);
+        try std.testing.expect(p.holding_stairs());
     }
 }
 

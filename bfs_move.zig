@@ -10,6 +10,7 @@ const Pos = brand.Pos;
 const b053 = brand.b053;
 const is_duplicate = brand.is_duplicate;
 const tan_tot = brand.tan_tot;
+const tan_tile = brand.tan_tile;
 
 const check_solution = brand.check_solution;
 

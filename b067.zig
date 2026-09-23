@@ -61,7 +61,7 @@ pub const Board = packed struct(if (endless) u64 else u60) {
     inline fn move_beaver(b: Board, dir: Action) ?Board {
         const new_p = move_by_a(b.beaver.p, dir);
         if (new_p == b.gray) {
-            if (wings and b.at(b.gray) == 0 and b.tiles == root_goal and b.stairs > 36) {
+            if (wings and b.at(b.gray) == 0 and b.tiles == root_goal and b.holding_stairs()) {
                 // we are hovering and beaver causes us to fall immediately
             } else return null; // beaver hits if able
         }
@@ -312,6 +312,10 @@ pub const Board = packed struct(if (endless) u64 else u60) {
         }
         return p;
     }
+
+    pub fn holding_stairs(b: Board) bool {
+        return b.stairs >= 36;
+    }
 };
 
 pub const Action = enum(u3) { Z, U, L, R, D };
@@ -475,18 +479,18 @@ test "gor sequence (endless)" {
     if (!endless) return error.SkipZigTest;
     // manually found
     const g1 = b067.do_actions("RDZUZUUZRDZLDZUUDZRDZULZLZRZURLZLRZLLDZRZULLRRZDDLZRLUULZDZRLZURRLZDDZLZLUZRZDZDUZRZLDRZDUZ").?;
-    try std.testing.expect(g1.stairs > 36);
+    try std.testing.expect(g1.holding_stairs());
     try std.testing.expect(g1.tiles == gor_tile);
     const g2 = b067.do_actions("RDZUZUUZRDZLDZUUDZRDZULZLZRZURLZLRZLLDZRZULLRRZDDZLZRULZRULZDDZDDRUZLZDLUZRUZLZLRZDLUZ").?;
-    try std.testing.expect(g2.stairs > 36);
+    try std.testing.expect(g2.holding_stairs());
     try std.testing.expect(g2.tiles == gor_tile);
     // solver found
     const g3 = b067.do_actions("RDDLZRUUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZRLZDZDRZUZLZUZLZLRZ").?;
-    try std.testing.expect(g3.stairs > 36);
+    try std.testing.expect(g3.holding_stairs());
     try std.testing.expect(g3.tiles == gor_tile);
     // solver found post-bugfix
     const g4 = b067.do_actions("RDZUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZDUZRLZLZRZDDUZRLZ").?;
-    try std.testing.expect(g4.stairs > 36);
+    try std.testing.expect(g4.holding_stairs());
     try std.testing.expect(g4.tiles == gor_tile);
 }
 test "gor sequence (endless+wings)" {
@@ -494,10 +498,10 @@ test "gor sequence (endless+wings)" {
     // solver found
     // sword is not helpful
     const g1 = b067.do_actions("RUUZLLRZLLRZRDDZLZRZRZDZRUZUZDZDLLZLZRZUZLZLZUZRLZDDUZRZ").?;
-    try std.testing.expect(g1.stairs > 36);
+    try std.testing.expect(g1.holding_stairs());
     try std.testing.expect(g1.tiles == gor_tile);
     const g2 = b067.do_actions("RUUZLLRZLLRZRDDZLZRZRZDZLZLRZRRUZUZDZLLLZLZUZRZLZDZDUZRZ").?;
-    try std.testing.expect(g2.stairs > 36);
+    try std.testing.expect(g2.holding_stairs());
     try std.testing.expect(g2.tiles == gor_tile);
 }
 test "lev sequence (endless+wings)" {
@@ -505,11 +509,11 @@ test "lev sequence (endless+wings)" {
     // solver found
     // sword is not helpful
     const g1 = b067.do_actions("DZURDDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZURRZDDZLUZLZ").?;
-    try std.testing.expect(g1.stairs > 36);
+    try std.testing.expect(g1.holding_stairs());
     try std.testing.expect(g1.tiles == lev_tile);
     // problem: solver did not find the shorter solution: bug where we stopped exploring too early
     const g2 = b067.do_actions("DZRDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZRURZDDZLUZLZ").?;
-    try std.testing.expect(g2.stairs > 36);
+    try std.testing.expect(g2.holding_stairs());
     try std.testing.expect(g2.tiles == lev_tile);
 }
 
