@@ -359,5 +359,5 @@ pub fn is_duplicate_board(a: Board, b: Board, prev_a: Action, prev_b: Action) bo
 pub fn is_duplicate_board2(a: Board, b: Board, a_cant_z: bool, b_cant_z: bool) bool {
     if (a == b) return true;
     if (@as(u80, @bitCast(a)) ^ @as(u80, @bitCast(b)) > 3) return false;
-    return a_cant_z and b_cant_z;
+    return a_cant_z or b_cant_z;
 }

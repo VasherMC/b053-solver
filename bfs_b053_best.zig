@@ -222,13 +222,46 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
             std.sort.pdq(Item, todo.items, {}, item_lessThan);
             //var dedup: std.ArrayList(Item) = try .initCapacity(alloc, todo.items.len / 2);
             var write_i: usize = 0;
-            item: for (todo.items, 0..todo.items.len) |b, read_i| {
+            //const debug_state = (hdiff == 3 and depth == 7);
+            // Consider the following four generated states (with wings on b053 at hdiff=3 depth=7):
+            //   ZURDDLU  (facing U, can_Z)   (requires wings)
+            //   ZURDDUL  (facing L, cant_Z)  (burdenless)
+            //   ZDRUULD  (facing D, can_Z)   (equivalently: ZRDUULD burdenless)
+            //   DRUULDZ  (facing D, cant_Z)  (burdenless)
+            // -> Ideally, we want to deduplicate these to only the (U, can_Z) state.
+            //    Seeing (D, can_Z) and (D, cant_Z) implies the Z action leads
+            //    to a previously seen state, here shown by DRUULDZZ = DRUULD == ZDRUULDZ.
+            // -> We want to avoid simple iteration order being a factor.
+            // Solution: we have the (merge identical except for can-Z states) pass run one step ahead
+            for (todo.items, 0..todo.items.len) |b, read_i| {
+                if (read_i + 2 < todo.items.len and todo.items[read_i + 1].b == todo.items[read_i + 2].b) {
+                    // [+1] and [+2] are identical except for can_Z
+                    // ensure we can detect they are duplicates no matter the order
+                    todo.items[read_i + 2].cant_z = true;
+                    todo.items[read_i + 1].cant_z = true;
+                }
                 if (read_i + 1 < todo.items.len and duplicate_item(b, todo.items[read_i + 1])) {
-                    if (b.cant_z) todo.items[read_i + 1].cant_z = true;
-                    // ^ in this case b.facing==a.facing and using Z would result in an alraedy seen state
+                    if (b.b.facing == todo.items[read_i + 1].b.facing and b.cant_z) {
+                        todo.items[read_i + 1] = b;
+                    } else if (b.b.facing != todo.items[read_i + 1].b.facing and !b.cant_z) {
+                        todo.items[read_i + 1] = b;
+                    }
                     if (duplicate_stats) stats_dupe_depth[0] += 1;
                     continue;
                 }
+                //
+                // not a duplicate
+                if (write_i == read_i) {
+                    write_i += 1; // already in correct position
+                    continue;
+                }
+                todo.items[write_i] = b;
+                write_i += 1;
+            }
+            // do the rest of pruning in a separate pass
+            const trimmed_len = write_i;
+            write_i = 0;
+            item: for (todo.items[0..trimmed_len], 0..trimmed_len) |b, read_i| {
                 const h = heuristic(b.b, goal_tile);
                 std.debug.assert((depth + h - min_heuristic) == hdiff);
                 // Check in previous buckets
