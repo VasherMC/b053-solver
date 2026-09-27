@@ -30,8 +30,14 @@ const Pos = brand.Pos;
 const b053 = brand.b053;
 const is_duplicate = brand.is_duplicate_board2;
 
+test {
+    std.testing.refAllDecls(@import("bfs_b053_best.zig"));
+}
+
 fn heuristic(b: Board, comptime goal: u35) u8 {
-    return @popCount(b.tiles ^ goal) + @as(u8, if (b.pocket != .Stairs) 1 else 0);
+    const excess = b.tiles & ~goal;
+    const missing = goal & ~b.tiles;
+    return @popCount(excess) + @popCount(missing) + @as(u8, if (!b.holding_stairs()) 1 else 0);
 }
 
 const Item = packed struct {
@@ -61,6 +67,7 @@ fn board_item_cmp(a: Board, b: Item) std.math.Order {
     return if (aa == bb) .eq else if (aa < bb) .lt else .gt;
 }
 
+// are two items at same depth duplicates
 inline fn duplicate_item(a: Item, b: Item) bool {
     return is_duplicate(a.b, b.b, a.cant_z, b.cant_z);
 }
@@ -84,7 +91,7 @@ fn item_lessThan(_: void, a: Item, b: Item) bool {
 
 fn prune(result: Board, depth: u8) bool {
     // ignore if the goal state is definitely not reachable within MAX_DEPTH total steps
-    return heuristic(result, goal_tile) + depth > MAX_DEPTH or @popCount(result.tiles) + result.pocket.walkable() < @popCount(goal_tile);
+    return heuristic(result, goal_tile) + depth > MAX_DEPTH or result.tileCount() < @popCount(goal_tile);
 }
 
 const duplicate_stats = false;
@@ -182,7 +189,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                         if (a == .Z and b.cant_z) continue; // we already computed this so may as well use it
                         if (b.b.do_action(a)) |result| {
                             if (result.tiles == goal_tile) {
-                                if (result.pocket == .Stairs) {
+                                if (result.holding_stairs()) {
                                     try trace_path_2(b, a, @intCast(depth - 1), finalized[0..]);
                                     found = true;
                                 }
