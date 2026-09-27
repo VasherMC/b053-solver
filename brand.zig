@@ -172,7 +172,7 @@ pub const Board = packed struct(u80) {
             },
         }
     }
-    pub fn reverse(b: Board, a: Action) if (allow_wings) [2]?Board else Board {
+    pub fn reverse(b: Board, a: Action) if (allow_wings) [2]?Board else [1]?Board {
         switch (a) {
             .Z => { // symmetrical
                 const forward = move_by(b.gray, b.facing);
@@ -184,7 +184,7 @@ pub const Board = packed struct(u80) {
                     .Empty => b.pickup(forward, f_tile),
                     else => b.place(forward),
                 };
-                return if (allow_wings) .{ result, null } else result;
+                return if (allow_wings) .{ result, null } else .{result};
             },
             else => {
                 const old_facing: Facing = switch (a) {
@@ -202,7 +202,7 @@ pub const Board = packed struct(u80) {
                 };
                 const old_pos = move_by(b.gray, back_dir);
                 if (allow_wings) return .{ b.unmove_to(old_pos, old_facing), b.unmove_to_hovering(old_pos, old_facing) };
-                return b.unmove_to(old_pos, old_facing);
+                return .{b.unmove_to(old_pos, old_facing)};
             },
         }
     }

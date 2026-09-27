@@ -100,8 +100,10 @@ fn trace_path_files(io: std.Io, end: Item, finalized: []const std.ArrayList(Item
                 .D => 'D',
             },
         })});
-        b = cur.b.reverse(cur.p);
-        if (b == b053) return;
+        const t = cur.b.reverse(cur.p);
+        inline for (t) |ti| if (ti == b053) return;
+        if (brand.allow_wings) @compileLog("TODO: fix wings logic here");
+        b = t[0].?;
         if (b.tileCount() == cur.b.tileCount()) {
             // parent should be in `finalized[depth-1]`
             const idx = std.sort.binarySearch(Item, finalized[cur.d - 1].items, b, board_item_cmp).?;

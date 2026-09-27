@@ -130,7 +130,7 @@ fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX
             },
         })});
         const t = cur.b.reverse(cur.p);
-        if (t[0] == b053 or t[1] == b053) return;
+        inline for (t) |ti| if (ti == b053) return;
         for (t) |ti| if (ti) |tb| {
             const hd = (d - 1) + heuristic(tb, goal_tile) - min_heuristic;
             const idx = std.sort.binarySearch(Item, finalized[hd][d - 1].items, tb, board_item_cmp);
