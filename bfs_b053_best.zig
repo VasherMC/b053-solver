@@ -24,6 +24,7 @@ const MAX_DEPTH: u8 = 1 + 46;
 //  manually found ZRDDRRLZLURZDDLUZDZLDULLURUULRURR XX
 //  search found   ZRULLDLRDRDRLDDULLURRZRRRULDZLZDZ X
 
+const BT = @typeInfo(Board).@"struct".backing_integer.?;
 const Board = brand.Board;
 const Action = brand.Action;
 const Pos = brand.Pos;
@@ -56,14 +57,14 @@ pub fn main(init: std.process.Init) !void {
 }
 
 fn boardCmp(a: Board, b: Board) std.math.Order {
-    const aa: u80 = @bitCast(a);
-    const bb: u80 = @bitCast(b);
+    const aa: BT = @bitCast(a);
+    const bb: BT = @bitCast(b);
     return if (aa == bb) .eq else if (aa < bb) .lt else .gt;
 }
 
 fn board_item_cmp(a: Board, b: Item) std.math.Order {
-    const aa: u80 = @bitCast(a);
-    const bb: u80 = @bitCast(b.b);
+    const aa: BT = @bitCast(a);
+    const bb: BT = @bitCast(b.b);
     return if (aa == bb) .eq else if (aa < bb) .lt else .gt;
 }
 
@@ -74,19 +75,19 @@ inline fn duplicate_item(a: Item, b: Item) bool {
 fn duplicate_a_subset_of_b(a: Item, b: Item) bool {
     // if a.cant_z then every move available to A is also available to B, so A is a duplicate
     // however if A CAN z, and lower-depth visited state B can't, then A allows a new path (assuming facing is diff)
-    return @as(u80, @bitCast(a.b)) ^ @as(u80, @bitCast(b.b)) < 4 and (a.b.facing == b.b.facing or a.cant_z);
+    return @as(BT, @bitCast(a.b)) ^ @as(BT, @bitCast(b.b)) < 4 and (a.b.facing == b.b.facing or a.cant_z);
 }
 
 // Used only in bucket_contains below, which searches buckets of lower move depth
 fn item_compare(a: Item, b: Item) std.math.Order {
     if (duplicate_a_subset_of_b(a, b)) return .eq;
-    return if (@as(u80, @bitCast(a.b)) < @as(u80, @bitCast(b.b))) .lt else .gt;
+    return if (@as(BT, @bitCast(a.b)) < @as(BT, @bitCast(b.b))) .lt else .gt;
 }
 fn bucket_contains(bucket: std.ArrayList(Item), x: Item) bool {
     return std.sort.binarySearch(Item, bucket.items, x, item_compare) != null;
 }
 fn item_lessThan(_: void, a: Item, b: Item) bool {
-    return (@as(u80, @bitCast(a.b)) < @as(u80, @bitCast(b.b)));
+    return (@as(BT, @bitCast(a.b)) < @as(BT, @bitCast(b.b)));
 }
 
 fn prune(result: Board, depth: u8) bool {
