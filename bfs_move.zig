@@ -26,10 +26,10 @@ pub fn main(init: std.process.Init) !void {
 // Optimizations:
 // - bfs with sortedmerge instead of hashmap
 // - compress sorted visited/todo streams with xor diff and variable-length encoding
-// - partition frontier into buckets to speed up sorting and reduce size
+// - partition frontier into buckets[quotienting] to speed up sorting and reduce size
 // - more aggressive pruning of likely-bad states
 // - ignore facing state where it's not important, to more aggressively deduplicate states
-// - bucket the todo list (frontier) and visited set as well (partition2)
+// - bucket[quotient] the todo list (frontier) and visited set as well (partition2)
 //    -> compression ratio drops from ~3.3 to ~2.4  (30% saving) in visited set
 // - improve compression in visited set ~25% (-> 1.8) by prioritizing small values
 //    -> slightly worsens compression in frontier subset
@@ -48,32 +48,32 @@ const compressedStream8 = struct {
         self.len = 0;
     }
     const Reader = struct {
-        stream: *const compressedStream8,
-        byte_offset: usize,
-        state: ?u64,
-        next_offset: ?usize,
+        bytes: []const u8,
+        byte_offset: usize = 0,
+        state: ?u64 = null,
+        next_offset: ?usize = null,
         fn hasNext(self: *@This()) bool {
-            return self.byte_offset < self.stream.*.arr.items.len;
+            return self.byte_offset < self.bytes.len;
         }
         fn peek(self: *@This()) ?u64 {
-            if (self.byte_offset >= self.stream.*.arr.items.len) return null;
+            if (self.byte_offset >= self.bytes.len) return null;
             if (self.byte_offset == 0) {
-                return std.mem.bytesToValue(u64, self.stream.*.arr.items[0..8]);
+                return std.mem.bytesToValue(u64, self.bytes[0..8]);
             }
             if (self.state == null) unreachable;
-            var diff = self.stream.*.arr.items[self.byte_offset];
+            var diff = self.bytes[self.byte_offset];
             // start at with high order bytes
             var mask: u64 = diff; // Short case (non-zero): done
             var read_offset: usize = self.byte_offset + 1;
             if (diff == 0) {
                 // Long case: read the actual mapping mask
-                diff = self.stream.*.arr.items[read_offset];
+                diff = self.bytes[read_offset];
                 read_offset += 1;
                 for (0..8) |bit_idx| {
                     mask <<= 8;
                     const bit = (diff >> @as(u3, @intCast(7 - bit_idx))) & 1;
                     if (bit == 1) {
-                        const byte = self.stream.*.arr.items[read_offset];
+                        const byte = self.bytes[read_offset];
                         read_offset += 1;
                         mask |= byte;
                     }
@@ -94,28 +94,28 @@ const compressedStream8 = struct {
         fn pop(self: *@This()) ?u64 {
             //std.debug.print("pop: offset {} bytes {any}\n", .{ self.byte_offset, self.stream.*.arr.items[self.byte_offset..] });
             self.next_offset = null;
-            if (self.byte_offset >= self.stream.*.arr.items.len) return null;
+            if (self.byte_offset >= self.bytes.len) return null;
             if (self.byte_offset == 0) {
-                self.state = std.mem.bytesToValue(u64, self.stream.*.arr.items[0..8]);
+                self.state = std.mem.bytesToValue(u64, self.bytes[0..8]);
                 self.byte_offset = 8;
                 return self.state.?;
             }
             if (self.state == null) unreachable;
             // decompress
             // VPEXPANDB
-            var diff = self.stream.*.arr.items[self.byte_offset];
+            var diff = self.bytes[self.byte_offset];
             self.byte_offset += 1;
             // start at with high order bytes
             var mask: u64 = diff; // Short case (non-zero): done
             if (diff == 0) {
                 // Long case: read the actual mapping mask
-                diff = self.stream.*.arr.items[self.byte_offset];
+                diff = self.bytes[self.byte_offset];
                 self.byte_offset += 1;
                 for (0..8) |bit_idx| {
                     mask <<= 8;
                     const bit = (diff >> @as(u3, @intCast(7 - bit_idx))) & 1;
                     if (bit == 1) {
-                        const byte = self.stream.*.arr.items[self.byte_offset];
+                        const byte = self.bytes[self.byte_offset];
                         self.byte_offset += 1;
                         mask |= byte;
                     }
@@ -127,7 +127,7 @@ const compressedStream8 = struct {
         }
     };
     fn reader(self: *const @This()) Reader {
-        return .{ .stream = self, .byte_offset = 0, .state = null, .next_offset = null };
+        return .{ .bytes = self.arr.items };
     }
     fn write(self: *@This(), state: ?u64, b: u64, alloc: std.mem.Allocator) !void {
         self.len += 1;

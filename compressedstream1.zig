@@ -6,8 +6,6 @@ const do_action = brand.do_action;
 const reverse = brand.reverse;
 const b053 = brand.b053;
 
-/// TODO:
-/// merge tiles/glass with PDEP/PEXT? (spread/select with 64-bit 0x33333333)
 const itemType = Board;
 const compressedStream = struct {
     arr: std.ArrayList(u8),
@@ -24,19 +22,21 @@ const compressedStream = struct {
         self.len = 0;
     }
     const Reader = struct {
-        stream: *const compressedStream,
-        byte_offset: usize,
-        state: ?u80,
+        bytes: []const u8,
+        byte_offset: usize = 0,
+        items: usize,
+        item_offset: usize = 0,
+        state: ?u80 = null,
         fn hasNext(self: *@This()) bool {
-            return self.byte_offset < self.stream.*.arr.items.len;
+            return self.item_offset < self.items;
         }
         fn peek(self: *@This()) ?itemType {
-            if (self.byte_offset >= self.stream.*.arr.items.len) return null;
+            if (self.item_offset >= self.items) return null;
             if (self.byte_offset == 0) {
-                return @bitCast(std.mem.bytesToValue(u80, self.stream.*.arr.items[0..10]));
+                return @bitCast(std.mem.bytesToValue(u80, self.bytes[0..10]));
             }
             if (self.state == null) unreachable;
-            const cmpr_indices = self.stream.*.arr.items[self.byte_offset .. self.byte_offset + 2];
+            const cmpr_indices = self.bytes[self.byte_offset..][0..2];
             const diff = std.mem.bytesToValue(u10, cmpr_indices);
             // start at with high order bytes
             var mask: u80 = 0;
@@ -45,7 +45,7 @@ const compressedStream = struct {
                 mask <<= 8;
                 const bit = (diff >> @as(u4, @intCast(9 - bit_idx))) & 1;
                 if (bit == 1) {
-                    const byte = self.stream.*.arr.items[self.byte_offset + i];
+                    const byte = self.bytes[self.byte_offset + i];
                     i += 1;
                     mask |= byte;
                 }
@@ -54,16 +54,16 @@ const compressedStream = struct {
         }
         fn pop(self: *@This()) ?itemType {
             //std.debug.print("pop: offset {} bytes {any}\n", .{ self.byte_offset, self.stream.*.arr.items[self.byte_offset..] });
-            if (self.byte_offset >= self.stream.*.arr.items.len) return null;
-            if (self.byte_offset == 0) {
-                self.state = std.mem.bytesToValue(u80, self.stream.*.arr.items[0..10]);
+            if (self.item_offset >= self.items) return null;
+            if (self.item_offset == 0) {
+                self.state = std.mem.bytesToValue(u80, self.bytes[0..10]);
                 self.byte_offset = 10;
                 return @bitCast(self.state.?);
             }
             if (self.state == null) unreachable;
             // decompress
             // VPEXPANDB
-            const cmpr_indices = self.stream.*.arr.items[self.byte_offset .. self.byte_offset + 2];
+            const cmpr_indices = self.bytes[self.byte_offset..][0..2];
             self.byte_offset += 2;
             const diff = std.mem.bytesToValue(u10, cmpr_indices);
             //std.debug.print("pop compressed indices: {b} (bytes: {any})\n", .{ diff, cmpr_indices });
@@ -74,18 +74,19 @@ const compressedStream = struct {
                 mask <<= 8;
                 const bit = (diff >> @as(u4, @intCast(9 - bit_idx))) & 1;
                 if (bit == 1) {
-                    const byte = self.stream.*.arr.items[self.byte_offset];
+                    const byte = self.bytes[self.byte_offset];
                     self.byte_offset += 1;
                     mask |= byte;
                 }
             }
             //std.debug.print("pop: xoring state with {b}\n", .{mask});
             self.state = self.state.? ^ mask;
+            self.item_offset += 1;
             return @bitCast(self.state.?);
         }
     };
     fn reader(self: *const @This()) Reader {
-        return .{ .stream = self, .byte_offset = 0, .state = null };
+        return .{ .bytes = self.arr.items, .items = self.len };
     }
     fn write(self: *@This(), state: ?u80, b: u80, alloc: std.mem.Allocator) !void {
         self.len += 1;
