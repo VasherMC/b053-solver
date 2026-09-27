@@ -4,7 +4,6 @@
 /// within-tilecount is regular BFS
 const std = @import("std");
 
-pub const wings = false;
 const brand = @import("brand.zig");
 
 // Limit move depth, if a solution is known to exist within a specific move count

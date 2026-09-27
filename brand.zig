@@ -18,13 +18,10 @@ pub const Tile = enum(u2) {
     }
 };
 
-/// To opt-in to wings movement, declare `pub const wings = true;` in the searcher file
-pub const wings = false;
-const allow_wings: bool = blk: {
-    const root = @import("root");
-    if (@hasDecl(root, "wings")) break :blk root.wings;
-    break :blk wings;
-};
+/// To enable wings, change this variable
+pub const wings = true;
+
+const allow_wings: bool = wings;
 
 pub const BT = @typeInfo(Board).@"struct".backing_integer.?;
 /// Least significant to most significant bits

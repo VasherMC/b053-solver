@@ -1,7 +1,6 @@
 /// BFS bruteforcer for b053
 const std = @import("std");
 
-pub const wings = false;
 const brand = @import("brand.zig");
 
 const Board = brand.Board;
