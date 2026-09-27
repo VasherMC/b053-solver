@@ -177,6 +177,8 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
     //
     var found = false;
     var max_depth_so_far: usize = 1;
+    var total_generated: usize = 0;
+    var total_dupes: usize = 0;
     for (finalized[0..], 0..) |*hgroup, hdiff| {
         for (hgroup[1..], 1..) |*todo, depth| {
             // generate states from parents  (pull model)
@@ -219,6 +221,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
             max_depth_so_far = @max(max_depth_so_far, depth);
             var stats_dupe_depth = if (duplicate_stats) [_]usize{0} ** MAX_DEPTH else {};
             std.debug.print("hdiff {} depth {}: generated {} states\n", .{ hdiff, depth, todo.items.len });
+            total_generated += todo.items.len;
             std.sort.pdq(Item, todo.items, {}, item_lessThan);
             //var dedup: std.ArrayList(Item) = try .initCapacity(alloc, todo.items.len / 2);
             var write_i: usize = 0;
@@ -288,6 +291,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                 //try dedup.append(alloc, b); // sorted
             }
             const dupe_amt = todo.items.len - write_i;
+            total_dupes += dupe_amt;
             //const dupe_amt = todo.items.len - dedup.items.len;
             std.debug.print("hdiff {} depth {}: done sort+dedup, duplicates {} / {}  ({}%)\n", .{ hdiff, depth, dupe_amt, todo.items.len, dupe_amt * 100 / todo.items.len });
             if (duplicate_stats) {
@@ -305,4 +309,56 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
         if (found) break;
     }
     std.debug.print("\nDone\n", .{});
+    std.debug.print("Total generated states: {}\nTotal duplicate states: {}\n", .{ total_generated, total_dupes });
+}
+
+const print = struct {
+    tiles: u35,
+    glass: u35,
+    pocket: brand.Tile,
+    gray: u6,
+    facing: brand.Facing,
+    prev: Action,
+    cant_z: bool,
+};
+fn print_state(b: Item) void {
+    if (@hasField(Board, "glass")) {
+        std.debug.print("{}", .{print{
+            .tiles = b.b.tiles,
+            .glass = b.b.glass,
+            .pocket = b.b.pocket,
+            .gray = b.b.gray,
+            .facing = b.b.facing,
+            .prev = b.p,
+            .cant_z = b.cant_z,
+        }});
+    } else {
+        const orig = b.b.to_orig();
+        std.debug.print("{}", .{
+            print{
+                .tiles = orig.tiles,
+                .glass = orig.glass,
+                .pocket = switch (orig.pocket) {
+                    .Empty => .Empty,
+                    .Stairs => .Stairs,
+                    .Glass => .Glass,
+                    .Tile => .Tile,
+                },
+                .gray = orig.gray,
+                .facing = switch (orig.facing) {
+                    .U => .U,
+                    .L => .L,
+                    .R => .R,
+                    .D => .D,
+                },
+                .prev = b.p,
+                .cant_z = b.cant_z,
+            },
+        });
+    }
+}
+fn print_dupe(dupe: Item, of: Item, msg: []const u8) void {
+    print_state(dupe);
+    print_state(of);
+    std.debug.print(" {s}\n", .{msg});
 }
