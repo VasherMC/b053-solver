@@ -490,7 +490,7 @@ const mappedStateStream = struct {
             else => {
                 if (@hasDecl(std.posix, "madvise") and @hasDecl(std.posix.MADV, "SEQUENTIAL"))
                     std.posix.madvise(self.map.memory.ptr, self.map.memory.len, std.posix.MADV.SEQUENTIAL) catch |err| {
-                        std.debug.print(".............madvise error: {}\n", .{err});
+                        std.debug.print(".............madvise error (SEQUENTIAL): {}\n", .{err});
                     };
             },
         }
@@ -506,7 +506,9 @@ const mappedStateStream = struct {
             },
             else => {
                 if (@hasDecl(std.posix, "madvise") and @hasDecl(std.posix.MADV, "DONT_NEED")) {
-                    try std.posix.madvise(self.map.memory.ptr, self.map.memory.len, std.posix.MADV.DONT_NEED);
+                    try std.posix.madvise(self.map.memory.ptr, self.map.memory.len, std.posix.MADV.DONT_NEED) catch |err| {
+                        std.debug.print(".............madvise error (DONT_NEED): {}\n", .{err});
+                    };
                 }
             },
             // see also [MacOS]:
