@@ -19,10 +19,10 @@ pub const Tile = enum(u2) {
 };
 
 const orig_Board = @import("brand.zig").Board;
-const endless = false;
-const stairs_tile = false; // whether the stairs is counted in Board.tiles
+pub const endless = false;
+pub const stairs_tile = false; // whether the stairs is counted in Board.tiles
 
-const wings = true;
+pub const wings = false;
 
 pub fn is_duplicate_board2(a: Board, b: Board, a_cant_z: bool, b_cant_z: bool) bool {
     if (a == b) return true;
@@ -140,7 +140,7 @@ pub const Board = packed struct(if (wings) u70 else u69) {
         // update the state as appropriate
         const need_to_break_glass = b.at(p) == .Glass;
         const remove_mask: u35 = if (need_to_break_glass) @as(u35, 1) << p else 0;
-        const new_hovering = if (wings) @as(u1, if (b.at(p) == .Empty) 1 else 0) else {};
+        const new_hovering = if (wings) @as(u1, if (b.at(p) == .Empty) 1 else 0) else 0;
         return Board{
             .tiles = b.tiles & ~remove_mask,
             .stairs = b.stairs,
