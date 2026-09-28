@@ -770,9 +770,10 @@ fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_pre
         try w.interface.writeAll(compressed.arr.items);
         try w.end();
     }
+    const written_bytes = compressed.arr.items.len + 16;
     file.close(io);
     compressed.deinit(alloc);
-    std.debug.print("Done writing to file\n\n", .{});
+    std.debug.print("Done writing to file (wrote {} states in {d} kib: avg {:.2} bytes/state)\n\n", .{ ret, written_bytes / 1024, @as(f64, @floatFromInt(written_bytes)) / @as(f64, @floatFromInt(ret)) });
     return ret;
 }
 
