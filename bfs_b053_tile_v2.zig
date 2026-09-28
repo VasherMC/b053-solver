@@ -414,7 +414,7 @@ pub fn main(init: std.process.Init) !void {
     }
     var resuming = (file_maxdepths[33] > 0);
     // run steps (each creates a new file "{tilecount}.{depth}.{none|wings}")
-    while (tilecount > MIN_TILES) : (tilecount -= 1) {
+    while (tilecount >= MIN_TILES) : (tilecount -= 1) {
         // load info for this tilecount from a previous run if any
         // get the highest depth present in directory for this tilecount
         // TODO load maps for prevs
