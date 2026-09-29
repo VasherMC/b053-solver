@@ -821,7 +821,14 @@ fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_pre
         var w = file.writer(io, writebuf[0..]);
         try w.interface.writeAll(&std.mem.toBytes(compressed.arr.items.len)); // bytelen
         try w.interface.writeAll(&std.mem.toBytes(compressed.len)); // itemlen
-        try w.interface.writeAll(compressed.arr.items);
+        // Writing more than 2**31 bytes can cause error.WriteFailed (with underlying file_write_err of null)
+        // seen specifically with length of 2271745757 bytes
+        const max_write: usize = @as(usize, 7) << 28; // let individual writes max out at ~1.9GB
+        var slice_remainder = compressed.arr.items[0..];
+        while (slice_remainder.len > max_write) {
+            try w.interface.writeAll(slice_remainder[0..max_write]);
+            slice_remainder = slice_remainder[max_write..];
+        }
         try w.end();
     }
     const written_bytes = compressed.arr.items.len + 16;
