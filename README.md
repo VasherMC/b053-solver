@@ -23,6 +23,20 @@ Requires `zig` 0.16 to run.
 
 ### Performance
 
+`bfs_b053_tile_v2.zig` is a resumable, undirected state space explorer that writes states to disk grouped by (tilecount, move depth).
+(Note the bottom-right corner tile covered by the rock is not included in this count -- Tan's brand has a tilecount of 21 by this metric.)
+It uses a simple variable-length diff compression that achieves an average of 4-5 bytes/state.
+Running it to a minimum tilecount of 22 consumes about 38GB of disk space, finishing in around 3 hours.
+Further running with a minimum tilecount of 21 consumes an additional 101GB disk space (for a total of 139GB) and finishes in around 12 hours.
+
+Since all unique reachable states are stored persistently in `b053-data/`,
+they can then later be queried for certain properties like matching a certain brand.
+This is done by `query_b053_data.zig`, which confirms Tan's brand is unreachable burdenless,
+and `stairs.zig`, which collects and deduplicates all distinct brand carvings
+(ignoring now-extraneous info like which tiles are glass or not).
+
+### Performance (Old)
+
 Running commit `b6552f6` under the following conditions:
 - Algorithm: BFS (this searcher has since been moved to `bfs_move.zig`)
 - Pruning (unchanged from the commit):
