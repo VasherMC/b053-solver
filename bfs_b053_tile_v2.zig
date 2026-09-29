@@ -471,6 +471,7 @@ pub const mappedStateStream = struct {
         // - no effect on other OS (eg darwin)
         const map = try file.createMemoryMap(io, .{ .len = try file.length(io), .protection = .{ .read = true } });
         const bytelen = std.mem.bytesToValue(u64, map.memory[0..8]);
+        if (bytelen + 16 != try file.length(io)) return error.BadFileLength;
         const itemlen = std.mem.bytesToValue(u64, map.memory[8..16]);
         return .{
             .file = file,
@@ -821,15 +822,17 @@ fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_pre
         var w = file.writer(io, writebuf[0..]);
         try w.interface.writeAll(&std.mem.toBytes(compressed.arr.items.len)); // bytelen
         try w.interface.writeAll(&std.mem.toBytes(compressed.len)); // itemlen
-        // Writing more than 2**31 bytes can cause error.WriteFailed (with underlying file_write_err of null)
+        // Writing more than 2**31 bytes can cause error.WriteFailed (with underlying write_file_err of null)
         // seen specifically with length of 2271745757 bytes
         const max_write: usize = @as(usize, 7) << 28; // let individual writes max out at ~1.9GB
         var slice_remainder = compressed.arr.items[0..];
-        while (slice_remainder.len > max_write) {
-            try w.interface.writeAll(slice_remainder[0..max_write]);
-            slice_remainder = slice_remainder[max_write..];
+        while (slice_remainder.len > 0) {
+            const writelen = @min(max_write, slice_remainder.len);
+            try w.interface.writeAll(slice_remainder[0..writelen]);
+            slice_remainder = slice_remainder[writelen..];
         }
         try w.end();
+        //if (w.pos != compressed.arr.items.len + 16) return error.IncompleteWrite;
     }
     const written_bytes = compressed.arr.items.len + 16;
     file.close(io);
