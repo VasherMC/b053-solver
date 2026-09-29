@@ -59,9 +59,19 @@ fn count_by_predicate(io: std.Io, dir: std.Io.Dir, tilecount: u6, comptime pred:
     return count;
 }
 
+fn trace_path_to_first_matching(io: std.Io, dir: std.Io.Dir, tilecount: u6, comptime pred: fn (Item) bool) !void {
+    const result = try first_by_predicate(io, dir, tilecount, pred) orelse {
+        std.debug.print("Couldn't find any matching end state; are files available?\n", .{});
+        return;
+    };
+    try bfs.trace_path_files(io, dir, result.item, result.depth);
+}
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const dir = try std.Io.Dir.cwd().openDir(io, "b053-data", .{ .iterate = true });
+    std.debug.print("path to Eus (reversed): ", .{});
+    try trace_path_to_first_matching(io, dir, bfs.eus_tot, eus_predicate);
     //try print_all(io, dir, 21, 230);
     //try print_all(io, dir, 21, 231);
     std.debug.assert(@popCount(bfs.tan_tile) == 21);

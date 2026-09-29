@@ -527,37 +527,89 @@ pub const mappedStateStream = struct {
 const native_endian = @import("builtin").cpu.arch.endian();
 
 /// Backtrace path through state space
-fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16) !void {
+/// assume end state is holding stairs (and not endless)
+pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16) !void {
     defer std.debug.print("\n\n", .{});
     var cur: Item = end;
+    var cur_tilecount: u6 = cur.empty_pocket_tilecount();
+    const start_pocket: u6 = cur.get_pocket(cur_tilecount); // 1 (stairs)
+    std.debug.assert(end.holding_stairs());
+    std.debug.assert(start_pocket == 1);
     var d = depth;
-    var b = end.b;
-    // trace within same tilecount (finalized)
-    while (d > 0) {
-        std.debug.print("{c}", .{@as(u8, switch (cur.p) {
-            .Z => 'Z',
-            else => switch (cur.b.facing) {
+    outer: while (d > 0) : (d -= 1) {
+        if (cur.cant_z) {
+            // facing doesn't give us previous move (always .D)
+            // previous move could also have been Z in any direction
+            // just check all possible predecessor states if they have cur as a successor
+            // since we need to iterate through the streams linearly anyways
+            inline for (.{ 0, 1 }) |tilecount_diff| {
+                const new_tilecount = cur_tilecount + tilecount_diff;
+                const do_action = if (tilecount_diff == 0) Item.do_action_nonbreaking else Item.do_action_breaking;
+                var buf: [20]u8 = undefined;
+                const filename = try setFilenameFor(buf[0..], new_tilecount, d - 1);
+                var f = try mappedStateStream.init(io, dir, filename); // could try open nonexistent file
+                if (f != null) {
+                    defer f.?.close(io) catch {};
+                    // search for the first valid predecessor
+                    var r = f.?.reader();
+                    while (r.pop()) |candidate| {
+                        if (@popCount(candidate.tiles ^ cur.tiles) > 1) continue;
+                        for (std.enums.values(Action)) |a| {
+                            if (do_action(candidate, a, new_tilecount)) |result| if (result == cur) {
+                                std.debug.print("{c}", .{@as(u8, switch (a) {
+                                    .U => 'U',
+                                    .L => 'L',
+                                    .R => 'R',
+                                    .D => 'D',
+                                    .Z => 'Z',
+                                })});
+                                cur = candidate;
+                                cur_tilecount = new_tilecount;
+                                continue :outer;
+                            };
+                        }
+                    }
+                }
+            }
+            std.debug.print("Couldn't find predecessor to state {} at tc={} depth={}\n", .{ cur, cur_tilecount, d });
+        } else {
+            // current action can Z, so previous action wasn't Z
+            // also, facing is valid
+            // so we know the last move was (FACING)
+            const last_move: Action = switch (cur.facing) {
+                .U => .U,
+                .L => .L,
+                .R => .R,
+                .D => .D,
+            };
+            std.debug.print("{c}", .{@as(u8, switch (cur.facing) {
                 .U => 'U',
                 .L => 'L',
                 .R => 'R',
                 .D => 'D',
-            },
-        })});
-        b = cur.b.reverse_partial(cur.p); // unknown facing
-        d -= 1;
-        // search for `b` in appropriate file
-        var buf: [20]u8 = undefined;
-        // TODO appropriate tilecount
-        const filename = try setFilenameFor(buf[0..], b.empty_pocket_tilecount(), d);
-        var f: mappedStateStream = try .init(io, dir, filename) orelse {
-            std.debug.print("could not open file {s}\n", .{filename});
-            @panic("Couldn't find a parent state");
-        };
-        cur = try f.findMatching(b) orelse {
-            std.debug.print("Could not find state {} in file {}\n", .{ b, filename });
-            @panic("Couldn't find a parent state");
-        };
-        f.close();
+            })});
+            // same deal but we already know the action
+            inline for (.{ 0, 1 }) |tilecount_diff| {
+                const new_tilecount = cur_tilecount + tilecount_diff;
+                const do_action = if (tilecount_diff == 0) Item.do_action_nonbreaking else Item.do_action_breaking;
+                var buf: [20]u8 = undefined;
+                const filename = try setFilenameFor(buf[0..], new_tilecount, d - 1);
+                var f = try mappedStateStream.init(io, dir, filename); // could try open nonexistent file
+                if (f != null) {
+                    defer f.?.close(io) catch {};
+                    // search for the first valid predecessor
+                    var r = f.?.reader();
+                    while (r.pop()) |candidate| {
+                        if (do_action(candidate, last_move, new_tilecount)) |result| if (result == cur) {
+                            cur = candidate;
+                            cur_tilecount = new_tilecount;
+                            continue :outer;
+                        };
+                    }
+                }
+            }
+            std.debug.print("Couldn't find predecessor to state {} at tc={} depth={}\n", .{ cur, cur_tilecount, d });
+        }
     }
 }
 
