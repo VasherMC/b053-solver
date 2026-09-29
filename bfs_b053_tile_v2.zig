@@ -23,10 +23,10 @@ const Facing = brand.Facing;
 const move_by = brand.move_by;
 const Tile = brand.Tile;
 const is_duplicate = brand.is_duplicate_board;
-const tan_tot = brand.tan_tot;
-const tan_tile = brand.tan_tile;
-const eus_tot = brand.eus_tot;
-const eus_tile = brand.eus_tile;
+pub const tan_tot = brand.tan_tot;
+pub const tan_tile = brand.tan_tile;
+pub const eus_tot = brand.eus_tot;
+pub const eus_tile = brand.eus_tile;
 
 test {
     std.testing.refAllDecls(@import("bfs_b053_tile_v2.zig"));
@@ -59,7 +59,7 @@ pub fn duplicate_item(a: Item, b: Item) bool {
 // - this isn't important for generating successor states
 // - when checking against previous-depth states, we also discard full Facing info for cant_Z states
 //   since it no longer matters (at most one exists) -- allows improved compression and checking by strict equality
-const Item = packed struct(u68) {
+pub const Item = packed struct(u68) {
     // pocket is implicitly determined by tilecount, omitted from state
     //
     facing: brand.Facing, // u2
@@ -451,12 +451,12 @@ pub fn main(init: std.process.Init) !void {
     //try run_bfs_tile(gpa, io, b053.tileCount());
 }
 
-fn setFilenameFor(buf: []u8, tilecount: u8, depth: u16) ![]const u8 {
+pub fn setFilenameFor(buf: []u8, tilecount: u8, depth: u16) ![]const u8 {
     return try std.fmt.bufPrint(buf, "{d}.{d}." ++ if (wings) "wings" else "none", .{ tilecount, depth });
 }
 
 const streamT = compressedStream; // see end of file for definition
-const mappedStateStream = struct {
+pub const mappedStateStream = struct {
     file: std.Io.File,
     map: std.Io.File.MemoryMap, // keeps a reference to file
     bytelen: u64,
@@ -871,7 +871,7 @@ const compressedStream = struct {
         fn hasNext(self: *@This()) bool {
             return self.byte_offset < self.bytes.len;
         }
-        fn pop(self: *@This()) ?Item {
+        pub fn pop(self: *@This()) ?Item {
             //std.debug.print("pop: offset {} bytes {any}\n", .{ self.byte_offset, self.bytes[self.byte_offset..] });
             if (self.byte_offset >= self.bytes.len) return null;
             if (self.byte_offset == 0) {
