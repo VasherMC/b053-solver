@@ -272,6 +272,17 @@ pub const Item = packed struct(u68) {
             },
         }
     }
+    pub fn unmove_to_old_facing(b: Item, old_facing: Facing) if (wings) [2]?Item else [1]?Item {
+        const back_dir: Facing = switch (b.facing) {
+            .U => .D,
+            .L => .R,
+            .R => .L,
+            .D => .U,
+        };
+        const old_pos = move_by(b.gray, back_dir);
+        if (wings) return .{ b.unmove_to(old_pos, old_facing), b.unmove_to_hovering(old_pos, old_facing) };
+        return .{b.unmove_to(old_pos, old_facing)};
+    }
     pub fn reverse(b: Item, a: Action) if (wings) [2]?Item else [1]?Item {
         switch (a) {
             .Z => { // symmetrical
@@ -287,22 +298,13 @@ pub const Item = packed struct(u68) {
                 return if (wings) .{ result, null } else result;
             },
             else => {
-                const old_facing: Facing = switch (a) {
+                return b.unmove_to_old_facing(switch (a) {
                     .U => .U,
                     .L => .L,
                     .R => .R,
                     .D => .D,
                     else => unreachable,
-                };
-                const back_dir: Facing = switch (b.facing) {
-                    .U => .D,
-                    .L => .R,
-                    .R => .L,
-                    .D => .U,
-                };
-                const old_pos = move_by(b.gray, back_dir);
-                if (wings) return .{ b.unmove_to(old_pos, old_facing), b.unmove_to_hovering(old_pos, old_facing) };
-                return .{b.unmove_to(old_pos, old_facing)};
+                });
             },
         }
     }
