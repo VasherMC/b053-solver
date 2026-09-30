@@ -4,7 +4,7 @@ const std = @import("std");
 // and deduplicate by lowest depth (to avoid multiple states for the same brand)
 
 test {
-    std.testing.refAllDecls(@import("query_brand_data.zig"));
+    std.testing.refAllDecls(@import("query_stairs_data.zig"));
 }
 
 const stairsReader = struct {
