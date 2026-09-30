@@ -450,7 +450,6 @@ pub fn main(init: std.process.Init) !void {
             try map.close(io);
         };
     }
-    //try run_bfs_tile(gpa, io, b053.tileCount());
 }
 
 pub fn setFilenameFor(buf: []u8, tilecount: u8, depth: u16) ![]const u8 {
@@ -556,7 +555,8 @@ pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16) !voi
                     while (r.pop()) |candidate| {
                         if (@popCount(candidate.tiles ^ cur.tiles) > 1) continue;
                         for (std.enums.values(Action)) |a| {
-                            if (do_action(candidate, a, new_tilecount)) |result| if (result == cur) {
+                            if (a == .Z and (tilecount_diff == 1 or candidate.cant_z or candidate.gray != cur.gray)) continue;
+                            if (do_action(candidate, a, new_tilecount)) |result| if (result.cant_z and backing(cur) ^ backing(result) < 4) {
                                 std.debug.print("{c}", .{@as(u8, switch (a) {
                                     .U => 'U',
                                     .L => 'L',
@@ -812,6 +812,7 @@ fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_pre
         for (todo.items) |item| try w.write(backing(item), alloc);
     }
     todo.deinit(alloc);
+    if (compressed.len != ret) return error.DidNotCompressAllItems;
 
     // write to file
     var fnamebuf: [20]u8 = undefined;
