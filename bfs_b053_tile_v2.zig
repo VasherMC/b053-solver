@@ -12,11 +12,12 @@ const stairs_tile = brand.stairs_tile; // are the stairs included in .tiles? fal
 const log_all_file_dedup_passes = false;
 
 // exit after exploring all states with this number of tiles
-const MIN_TILES: u6 = tan_tot;
+const MIN_TILES: u6 = 20;
 
 const pruning: bool = false; // disable best-guess pruning, explore full state space
 
 const BT = @typeInfo(Item).@"struct".backing_integer.?;
+const inmem_ItemT = Item2;
 const Action = brand.Action;
 const Pos = brand.Pos;
 const Facing = brand.Facing;
@@ -32,19 +33,57 @@ test {
     std.testing.refAllDecls(@import("bfs_b053_tile_v2.zig"));
 }
 
+// becomes @backingInt in v0.17+
+inline fn backing(x: anytype) switch (@typeInfo(@TypeOf(x))) {
+    .int => @TypeOf(x),
+    .@"struct" => |s| s.backing_integer.?,
+    else => @compileError(""),
+} {
+    return @bitCast(x);
+}
+
+// helper used when doing a two-pointer sorted deduplicate
+inline fn backing_M(x: Item) BT {
+    return backing(x) & notFacingMask;
+}
+
+inline fn toItem(x: inmem_ItemT) Item {
+    return switch (inmem_ItemT) {
+        Item => x,
+        Item2 => x.to_Item(),
+        else => unreachable,
+    };
+}
+inline fn fromItem(x: Item) inmem_ItemT {
+    return switch (inmem_ItemT) {
+        Item => x,
+        Item2 => .from_Item(x),
+        else => unreachable,
+    };
+}
+
 const notFacingMask = ~@as(BT, 0b111); // include facing and can_Z/cant_Z
-inline fn equal_mod_facing(a: Item, b: Item) bool {
-    //return @as(BT, @bitCast(a)) & notFacingMask == @as(BT, @bitCast(b)) & notFacingMask;
-    return @as(BT, @bitCast(a)) ^ @as(BT, @bitCast(b)) < 8;
+inline fn equal_mod_facing(a: anytype, b: anytype) bool {
+    //return backing(a) & notFacingMask == backing(b) & notFacingMask;
+    return backing(a) ^ backing(b) < 8;
 }
-pub fn item_lessThan(_: void, a: Item, b: Item) bool {
-    // used for sorting; just sort as backing int
-    return @as(BT, @bitCast(a)) < @as(BT, @bitCast(b));
-}
-// TODO deduplicate these functions
-pub fn duplicate_item(a: Item, b: Item) bool {
+pub fn duplicate_item(a: inmem_ItemT, b: inmem_ItemT) bool {
     return a == b or (equal_mod_facing(a, b) and (a.cant_z or b.cant_z));
 }
+
+pub fn item_lessThan(_: void, a: Item, b: Item) bool {
+    // used for sorting; just sort as backing int
+    return backing(a) < backing(b);
+}
+pub fn item2_lessThan(_: void, a: Item2, b: Item2) bool {
+    // ensure we sort consistently with stored items
+    return item_lessThan({}, a.to_Item(), b.to_Item());
+}
+const inmem_lessThan = switch (inmem_ItemT) {
+    Item => item_lessThan,
+    Item2 => item2_lessThan,
+    else => unreachable,
+};
 
 //
 //
@@ -645,15 +684,7 @@ pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16) !voi
     }
 }
 
-inline fn backing(x: Item) BT {
-    return @bitCast(x);
-}
-
-inline fn backing_M(x: Item) BT {
-    return backing(x) & notFacingMask;
-}
-
-fn merge_dedup(current: *std.ArrayList(Item), past_r_orig: streamT.Reader) usize {
+fn merge_dedup(current: *std.ArrayList(inmem_ItemT), past_r_orig: streamT.Reader) usize {
     // can_Z < cant_Z
     // return count of duplicate items that were removed
     var past_r = past_r_orig;
@@ -661,14 +692,16 @@ fn merge_dedup(current: *std.ArrayList(Item), past_r_orig: streamT.Reader) usize
     var read_i: usize = 0;
     var write_i: usize = 0;
     loop: while (read_i < current.items.len) : (read_i += 1) {
-        const cur = current.items[read_i];
+        // we do our duplicate checks in Item (stored type) instead of inmem_ItemT,
+        // because items in each list are naturally ordered in backing(Item) and not in backing(inmem_ItemT).
+        const cur: Item = toItem(current.items[read_i]);
         // maybe advance past until there could be a duplicate
         while (backing_M(past_item) < backing_M(cur)) past_item = past_r.pop() orelse break :loop;
         // if cur can_Z, dupe must be equal: maybe advance past until there
         // we are also guaranteed that no cant_Z state is present (so it's ok to advance past all matching prev states)
         while (!cur.cant_z and backing(past_item) < backing(cur)) past_item = past_r.pop() orelse break :loop;
         // check for equal dupe
-        if (past_item == current.items[read_i]) continue;
+        if (past_item == cur) continue;
         // other dupes have different cant_Z.
         // check for (current is cant_Z only, prev is any matching)
         // (we know that prev hasn't been already advanced past because cur is the only state mod facing/Z)
@@ -686,7 +719,7 @@ fn merge_dedup(current: *std.ArrayList(Item), past_r_orig: streamT.Reader) usize
     return ret;
 }
 
-pub fn add_breaking_moves(alloc: std.mem.Allocator, prevs: streamT.Reader, todo: *std.ArrayList(Item), tilecount: u6) !void {
+pub fn add_breaking_moves(alloc: std.mem.Allocator, prevs: streamT.Reader, todo: *std.ArrayList(inmem_ItemT), tilecount: u6) !void {
     var r = prevs;
     while (r.pop()) |state| {
         inline for (std.enums.values(Action)) |a| {
@@ -694,23 +727,23 @@ pub fn add_breaking_moves(alloc: std.mem.Allocator, prevs: streamT.Reader, todo:
             if (state.do_action_breaking(a, tilecount)) |new| {
                 // we broke glass if the tiles are different
                 if (new.tiles == state.tiles) @panic("didn't break glass");
-                try todo.append(alloc, new);
+                try todo.append(alloc, fromItem(new));
             }
         }
     }
 }
-pub fn add_nonbreaking_moves(alloc: std.mem.Allocator, prevs: streamT.Reader, todo: *std.ArrayList(Item), tilecount: u6) !void {
+pub fn add_nonbreaking_moves(alloc: std.mem.Allocator, prevs: streamT.Reader, todo: *std.ArrayList(inmem_ItemT), tilecount: u6) !void {
     var r = prevs;
     while (r.pop()) |state| {
         inline for (std.enums.values(Action)) |a| {
             if (a == .Z) {
                 if (state.cant_z) {} else if (state.do_action_nonbreaking(a, tilecount)) |new| {
-                    try todo.append(alloc, new);
+                    try todo.append(alloc, fromItem(new));
                 }
             } else if (state.do_action_nonbreaking(a, tilecount)) |new| {
                 // we broke glass if the tiles are different
                 if (new.tiles != state.tiles) @panic("broke glass somewhere unexpected");
-                try todo.append(alloc, new);
+                try todo.append(alloc, fromItem(new));
             }
         }
     }
@@ -726,12 +759,13 @@ fn expect_add_x_moves(f: @TypeOf(add_breaking_moves), initial_state: Item, tc: u
     defer stream.deinit(std.testing.allocator);
     try w.write(backing(initial_state), std.testing.allocator);
     // read
-    var todo: std.ArrayList(Item) = .empty;
+    var todo: std.ArrayList(inmem_ItemT) = .empty;
     defer todo.deinit(std.testing.allocator);
     try f(std.testing.allocator, stream.reader(), &todo, tc);
     try std.testing.expect(todo.items.len == results.len);
     for (results) |a| {
-        try std.testing.expect(std.mem.findScalar(Item, todo.items, initial_state.do_action(a, tc).?) != null);
+        const r: inmem_ItemT = fromItem(initial_state.do_action(a, tc).?);
+        try std.testing.expect(std.mem.findScalar(inmem_ItemT, todo.items, r) != null);
     }
 }
 test "add_breaking_moves" {
@@ -753,13 +787,13 @@ test "add_nonbreaking_moves" {
 /// also, when reading the most recent depth to generate states, add it to the cache
 fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_prevs: *std.ArrayList(?mappedStateStream), tilecount: u6, depth: u16) !usize {
     // grouped by tilecount and move depth
-    var todo: std.ArrayList(Item) = .empty;
+    var todo: std.ArrayList(inmem_ItemT) = .empty;
     std.debug.print("tilecount {} depth {} prevs_len {}\n", .{ tilecount, depth, tilecount_prevs.items.len });
     if (tilecount > b053.empty_pocket_tilecount()) {
         return error.InvalidTilecount;
     }
     if (tilecount == b053.empty_pocket_tilecount() and depth == 0) {
-        try todo.append(alloc, b053);
+        try todo.append(alloc, fromItem(b053));
     } else {
         if (depth == 0) return 0;
         var buf: [20]u8 = undefined;
@@ -786,7 +820,7 @@ fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_pre
             return 0;
         }
         // sort
-        std.sort.pdq(Item, todo.items, {}, item_lessThan);
+        std.sort.pdq(inmem_ItemT, todo.items, {}, inmem_lessThan);
         // deduplicate inplace: first pass
         var write_i: usize = 0;
         const todo_orig_len = todo.items.len;
@@ -840,7 +874,7 @@ fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_pre
     var compressed: streamT = .empty;
     {
         var w = compressed.writer();
-        for (todo.items) |item| try w.write(backing(item), alloc);
+        for (todo.items) |item| try w.write(backing(toItem(item)), alloc);
     }
     todo.deinit(alloc);
     if (compressed.len != ret) return error.DidNotCompressAllItems;
