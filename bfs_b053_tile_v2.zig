@@ -468,10 +468,14 @@ pub const mappedStateStream = struct {
         // - no effect on windows (SEC_COMMIT) since it is backed by a file (?)
         // - prefault everything on linux
         // - no effect on other OS (eg darwin)
-        const map = try file.createMemoryMap(io, .{ .len = try file.length(io), .protection = .{ .read = true } });
+        const filelen = try file.length(io);
+        const map = try file.createMemoryMap(io, .{ .len = filelen, .protection = .{ .read = true } });
         const bytelen = std.mem.bytesToValue(u64, map.memory[0..8]);
-        if (bytelen + 16 != try file.length(io)) return error.BadFileLength;
         const itemlen = std.mem.bytesToValue(u64, map.memory[8..16]);
+        if (bytelen + 16 != filelen) {
+            std.debug.print("File length {} does not match with expected length {}\n", .{ filelen, bytelen + 16 });
+            return error.BadFileLength;
+        }
         return .{
             .file = file,
             .map = map,
@@ -818,7 +822,7 @@ fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_pre
     var fnamebuf: [20]u8 = undefined;
     const filename = try setFilenameFor(fnamebuf[0..], tilecount, depth);
     var file = try dir.createFile(io, filename, .{});
-    {
+    const bytes_written: usize = blk: {
         var writebuf: [1024]u8 = undefined;
         var w = file.writer(io, writebuf[0..]);
         try w.interface.writeAll(&std.mem.toBytes(compressed.arr.items.len)); // bytelen
@@ -833,12 +837,14 @@ fn run_step(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount_pre
             slice_remainder = slice_remainder[writelen..];
         }
         try w.end();
-        //if (w.pos != compressed.arr.items.len + 16) return error.IncompleteWrite;
+        break :blk w.pos;
+    };
+    if (bytes_written != compressed.arr.items.len + 16) {
+        std.debug.print("wrote {} bytes but expected to write {} bytes\n", .{ bytes_written, compressed.arr.items.len + 16 });
     }
-    const written_bytes = compressed.arr.items.len + 16;
     file.close(io);
     compressed.deinit(alloc);
-    std.debug.print("Done writing to file (wrote {} states in {d} kib: avg {:.2} bytes/state)\n\n", .{ ret, written_bytes / 1024, @as(f64, @floatFromInt(written_bytes)) / @as(f64, @floatFromInt(ret)) });
+    std.debug.print("Done writing to file (wrote {} states in {d} kib: avg {:.2} bytes/state)\n\n", .{ ret, bytes_written / 1024, @as(f64, @floatFromInt(bytes_written)) / @as(f64, @floatFromInt(ret)) });
     return ret;
 }
 
