@@ -310,8 +310,6 @@ pub const Item = packed struct(u68) {
     }
     pub fn get_pocket(b: Item, tilecount: u6) u6 {
         // things in pocket (includes stairs)
-        // stairs_tile and holding: 0
-        // stairs_tile and not holding stairs:
         if (stairs_tile) {
             @compileLog("unimplemented");
         } else {
@@ -345,11 +343,26 @@ pub fn can_Z_base(pocket: u6, gray: Pos, facing: Facing, tiles: u35, stairs: u6)
     return (fw != gray) and (if (endless) (fw_has_tile or pocket != 0) else ((pocket == 0) == fw_has_tile));
 }
 
-// TODO: test whether packing gray+solid+stairs together (gets down to 64 bits given no endless) is good
-// -> does it improve on-disk size / compression? how much?
-// -> how much does it improve memory usage -- is memory usage still a concern? (current design should mean no)
-// -> does it improve speed? (guess: maybe? only impact is during state generation; deduplication is ~the same)
-// UNUSED
+// TODO: test whether using Item2 can improve on-disk size / compression? and by how much?
+//  maybe also test original b053 brand.Board with the glass bitmask and xor-diff?
+//  that was getting down to 2-3 bytes, but only for full visited set (frontier was still around 4.5?)
+// TODO: Is quotienting better than using Item2 as an intermediate?
+test "item2" {
+    try std.testing.expect(Item2.from_Item(b053).to_Item() == b053);
+    const holding_tile = b053.do_action(.Z, b053.empty_pocket_tilecount()).?;
+    try std.testing.expect(Item2.from_Item(holding_tile).to_Item() == holding_tile);
+}
+/// Even with a staged architecture, memory usage IS still a major concern
+/// when we are generating 2 billion+ states at a time.
+/// Since Pos doesn't use the full u6 space (only up to 36 values [for non-endless] out of the 64 possible)
+/// we can pack the data tighter by explicitly encoding the product space.
+/// This brings the size down to 64 bits, resulting in 50% memory usage compared to `Item` (due to alignment/padding)
+/// Maintaining facing and cant_z in the least significant 3 bits allows simple same-depth deduplication,
+/// though we still need to convert back and forth for previous-depth deduplication
+/// In practice, this reduces run_step time by ~45-50% when the program is memory-dominated
+///  where we are storing upwards of 2_380_000_000 states in memory at once (tc 20 depth 84),
+///  32GB => 16GB means we can fit more data in RAM instead of needing large amounts of swap
+///  and also avoids potential OS-level VM compression overhead.
 const Item2 = packed struct(u64) {
     // pocket is implicitly determined by tilecount, omitted from state
     facing: brand.Facing, // u2
@@ -359,15 +372,29 @@ const Item2 = packed struct(u64) {
     hovering: if (wings) u1 else u0,
     tiles: u35,
 
-    fn to_Item(x: @This()) Item {
+    fn from_Item(x: Item) @This() {
         return .{
             .facing = x.facing,
             .cant_z = x.cant_z,
-            .gray = x.gray_solid_stairs % 36,
-            .solid1 = (x.gray_solid_stairs / (36)) % 36,
-            .solid2 = (x.gray_solid_stairs / (36 * 36)) % 36,
-            .solid3 = (x.gray_solid_stairs / (36 * 36 * 36)) % 36,
-            .stairs = (x.gray_solid_stairs / (36 * 36 * 36 * 36)),
+            .gray_solid_stairs = x.gray + 36 * (x.solid1 + 36 * (x.solid2 + 36 * ((if (x.solid3 == 36) 35 else x.solid3) + @as(u26, 36) * x.stairs))),
+            .tiles = x.tiles,
+            .hovering = x.hovering,
+        };
+    }
+    fn to_Item(x: @This()) Item {
+        // Note that `Item` stores the bottom tile in the pocket as 36, not 35,
+        // even though 35 would not be ambiguous with board positions due to our tiletype being u35
+        // Since [solid1, solid2, solid3] are sorted and we are ignoring endless (for now),
+        // we only need to check solid3 for being in the pocket, and update it to avoid overflow into `stairs`
+        const read_solid3: u6 = @intCast((x.gray_solid_stairs / (36 * 36 * 36)) % 36);
+        return .{
+            .facing = x.facing,
+            .cant_z = x.cant_z,
+            .gray = @intCast(x.gray_solid_stairs % 36),
+            .solid1 = @intCast((x.gray_solid_stairs / (36)) % 36),
+            .solid2 = @intCast((x.gray_solid_stairs / (36 * 36)) % 36),
+            .solid3 = if (read_solid3 == 35) 36 else read_solid3,
+            .stairs = @intCast(x.gray_solid_stairs / (36 * 36 * 36 * 36)),
             .tiles = x.tiles,
             .hovering = x.hovering,
         };
