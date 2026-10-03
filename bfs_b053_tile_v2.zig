@@ -4,7 +4,7 @@
 /// within-tilecount is regular BFS
 const std = @import("std");
 
-const brand = @import("b053_v2.zig");
+pub const brand = @import("b053_v2.zig");
 const endless = brand.endless;
 const wings = brand.wings;
 const stairs_tile = brand.stairs_tile; // are the stairs included in .tiles? false
@@ -63,7 +63,7 @@ inline fn fromItem(x: Item) inmem_ItemT {
 }
 
 const notFacingMask = ~@as(BT, 0b111); // include facing and can_Z/cant_Z
-inline fn equal_mod_facing(a: anytype, b: anytype) bool {
+pub inline fn equal_mod_facing(a: anytype, b: anytype) bool {
     //return backing(a) & notFacingMask == backing(b) & notFacingMask;
     return backing(a) ^ backing(b) < 8;
 }
