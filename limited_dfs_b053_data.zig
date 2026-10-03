@@ -40,7 +40,7 @@ fn dfs(item: Item, alloc: std.mem.Allocator, tilecount: u6, depth: u16, seen: *s
                 print_char(a);
                 return true;
             }
-        } else if (item.do_action_nonbreaking(a, tilecount)) |nobreak_a| {
+        } else if (a != .Z or !item.cant_z) if (item.do_action_nonbreaking(a, tilecount)) |nobreak_a| {
             if (std.mem.findScalar(Item, seen.items, nobreak_a)) |_| continue;
             try seen.append(alloc, nobreak_a);
             defer _ = seen.pop();
@@ -49,7 +49,7 @@ fn dfs(item: Item, alloc: std.mem.Allocator, tilecount: u6, depth: u16, seen: *s
                 print_char(a);
                 return true;
             }
-        }
+        };
     }
     return false;
 }

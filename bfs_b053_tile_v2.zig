@@ -124,6 +124,7 @@ pub const Item = packed struct(u68) {
     fn pickup(b: Item, p: Pos, t: Tile, tilecount: u6) Item { // t is non-empty
         if (p > 34) unreachable;
         const pocket = b.get_pocket(tilecount);
+        // require that caller has checked picking up is possible
         if (!endless and pocket != 0) unreachable;
         // we can apply the mask even if we are picking up stairs and might not need to
         const remove_mask: u35 = @as(u35, 1) << p;
@@ -153,6 +154,7 @@ pub const Item = packed struct(u68) {
         // guaranteed p is empty
         if (p > 34) unreachable;
         const pocket = b.get_pocket(tilecount);
+        // require that caller has checked placing is possible
         if (pocket == 0) unreachable;
         if (!endless and pocket != 1) unreachable;
         const pocket_top = @as(Pos, 35) + pocket;
