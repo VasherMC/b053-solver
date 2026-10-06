@@ -95,6 +95,7 @@ fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir) !bo
         defer f.close(io) catch {};
         var r = f.reader();
         var fw_state = r.pop() orelse continue;
+        std.debug.print("Checking depth {}...\n", .{depth});
         for (backwards_states) |bw_state| {
             while ((bfs.backing(fw_state) >> 3) < (bfs.backing(bw_state) >> 3)) fw_state = r.pop() orelse continue :outer;
             if (bfs.equal_mod_facing(fw_state, bw_state)) {
@@ -110,10 +111,22 @@ fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir) !bo
 }
 
 // run the backwards portion of the bidirectional search
-fn bidi(start: u35, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool {
+fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool {
     var states: std.ArrayList(Item) = .empty;
-    var next_states = try possible_end_states(start, alloc);
-    const start_tilecount: u6 = @popCount(start); // pocket contains stairs only
+    var next_states = switch (@TypeOf(start)) {
+        u35 => try possible_end_states(start, alloc),
+        Item => blk: {
+            var x = try std.ArrayList(Item).initCapacity(alloc, 1);
+            x.appendAssumeCapacity(start);
+            break :blk x;
+        },
+        else => unreachable,
+    };
+    const start_tilecount: u6 = @popCount(switch (@TypeOf(start)) {
+        u35 => start,
+        Item => start.tiles,
+        else => unreachable,
+    }); // pocket contains stairs only
     // we ignore depth here
     // since end states can have either parity, just implement something simple first and optimize later
     for (start_tilecount..data_complete_tiles) |tilecount| {
@@ -178,6 +191,52 @@ fn bidi(start: u35, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool
     // now we have the list of next_states (breaking moves only) for the desired tilecount
     defer next_states.deinit(alloc);
     return try check_any_matching(next_states.items, io, dir);
+}
+
+test "trailer brand intermediate" {
+    const trailer_brand_19 = Item{
+        .tiles = 0b100001_100000_111110_110011_111000_11110,
+        .facing = .R,
+        .gray = 19,
+        .solid1 = 19,
+        .solid2 = 20,
+        .solid3 = 21,
+        .stairs = 26,
+        .hovering = 0,
+        .cant_z = false,
+    };
+    const trailer_brand_16 = Item{
+        .tiles = 0b100001_010000_010010_110011_111000_11110,
+        .facing = .R,
+        .gray = 27,
+        .solid1 = 15,
+        .solid2 = 21,
+        .solid3 = 27,
+        .stairs = 36,
+        .hovering = 0,
+        .cant_z = false,
+    };
+    const trailer_brand_14 = Item{
+        .tiles = 0b100001_010000_010010_110011_011000_10110,
+        .facing = .R,
+        .gray = 9,
+        .solid1 = 9,
+        .solid2 = 15,
+        .solid3 = 21,
+        .stairs = 33,
+        .hovering = 0,
+        .cant_z = false,
+    };
+    const dir = try std.Io.Dir.cwd().openDir(std.testing.io, "b053-data", .{ .iterate = true });
+    var buf: [20]u8 = undefined;
+    const fname = try bfs.setFilenameFor(buf[0..], data_complete_tiles, 150);
+    var f = bfs.mappedStateStream.init(std.testing.io, dir, fname) catch {
+        return error.SkipZigTest;
+    } orelse return error.SkipZigTest;
+    try f.close(std.testing.io);
+    try std.testing.expect(try bidi(trailer_brand_19, std.testing.allocator, std.testing.io, dir));
+    try std.testing.expect(try bidi(trailer_brand_16, std.testing.allocator, std.testing.io, dir));
+    try std.testing.expect(try bidi(trailer_brand_14, std.testing.allocator, std.testing.io, dir));
 }
 
 pub fn main(init: std.process.Init) !void {
