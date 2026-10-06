@@ -117,6 +117,7 @@ fn bidi(start: u35, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool
     // we ignore depth here
     // since end states can have either parity, just implement something simple first and optimize later
     for (start_tilecount..data_complete_tiles) |tilecount| {
+        std.debug.print("generating states for tilecount {}\n", .{tilecount});
         // finish generating states for the tilecount with nonbreaking moves
         // we have an initial set of states for the tilecount
         states = .empty; // all states at current-depth
@@ -124,6 +125,7 @@ fn bidi(start: u35, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool
         var new_states: std.ArrayList(Item) = next_states; // intermediate for next-depth
         next_states = .empty; // intermediate for next-tilecount
         while (new_states.items.len > 0) {
+            std.debug.print("new states: {}, total: {}\n", .{ new_states.items.len, states.items.len });
             // generate child states at new depth
             cur_states = new_states;
             new_states = .empty;
@@ -135,7 +137,7 @@ fn bidi(start: u35, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool
             cur_states.deinit(alloc);
             std.sort.pdq(Item, states.items, {}, bfs.item_lessThan);
             // sort the nonbreaking children for the next depth
-            std.sort.pdq(Item, next_states.items, {}, bfs.item_lessThan);
+            std.sort.pdq(Item, new_states.items, {}, bfs.item_lessThan);
             // deduplicate the nonbreaking children against the updated main list
             var main_i: usize = 0;
             var write_i: usize = 0;
@@ -153,9 +155,10 @@ fn bidi(start: u35, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool
             if (write_i < new_states.items.len) new_states.shrinkAndFree(alloc, write_i);
         }
         std.debug.assert(new_states.items.len == 0);
-        std.debug.assert(cur_states.items.len == 0);
+        //std.debug.assert(cur_states.items.len == 0); undefined after deinit
         // we've generated all same-tilecount (nonbreaking) states
         // generate states for next tilecount
+        std.debug.print("generating breaking moves from tilecount {} back to {}\n", .{ tilecount, tilecount + 1 });
         for (states.items) |it| {
             for (it.predecessors_breaking()) |pred| if (pred) |newstate| try next_states.append(alloc, newstate);
         }
@@ -171,7 +174,9 @@ fn bidi(start: u35, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool
         // clean up
         states.deinit(alloc);
     }
+    std.debug.print("checking if any states match...\n", .{});
     // now we have the list of next_states (breaking moves only) for the desired tilecount
+    defer next_states.deinit(alloc);
     return try check_any_matching(next_states.items, io, dir);
 }
 
