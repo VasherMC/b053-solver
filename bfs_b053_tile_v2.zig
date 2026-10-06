@@ -218,6 +218,8 @@ pub const Item = packed struct(u68) {
     /// unbreaking glass as necessary, resulting in a grounded (non-hover) state
     fn unmove_to(b: Item, p: Pos, f: Facing) ?Item {
         if (p > 34) unreachable;
+        // **NOTE** does not account for enemies or e.g. mimics who could have followed or pushed there
+        if (p == b.gray) return null; // would back into a wall or rock
         switch (b.at(p)) {
             .Glass, .Stairs => return null, // couldnt have come from there
             else => {},

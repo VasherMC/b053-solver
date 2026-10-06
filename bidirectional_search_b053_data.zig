@@ -19,6 +19,30 @@ fn print_char(a: bfs.brand.Action) void {
     })});
 }
 
+test "Add end states" {
+    const tilecount = @popCount(brand.add_tile);
+    var arr = try possible_end_states(brand.add_tile, std.testing.allocator);
+    defer arr.deinit(std.testing.allocator);
+    try std.testing.expect(arr.items.len == 57120);
+    try std.testing.expect(arr.items[0] == bfs.Item{
+        .tiles = brand.add_tile,
+        .gray = 0, // standing on glass
+        .cant_z = false,
+        .facing = .U,
+        .solid1 = 4,
+        .solid2 = 8,
+        .solid3 = 9,
+        .stairs = 36,
+        .hovering = 0,
+    });
+    // facing up: only nonbreaking move is placing the stairs
+    try std.testing.expect(arr.items[0].predecessors_nonbreaking(tilecount)[0].?.stairs == 6);
+    try std.testing.expect(arr.items[0].predecessors_nonbreaking(tilecount)[0].?.gray == 0);
+    for (arr.items[0].predecessors_nonbreaking(tilecount)[1..]) |item| try std.testing.expect(item == null);
+    // breaking move would be backwards into the wall
+    for (arr.items[0].predecessors_breaking()) |item| try std.testing.expect(item == null);
+}
+
 fn possible_end_states(tiles: u35, alloc: std.mem.Allocator) !std.ArrayList(Item) {
     var result: std.ArrayList(Item) = .empty;
     // generate all possibilities of (solid tile positions, gray position, facing)
