@@ -34,7 +34,7 @@ test {
 }
 
 // becomes @backingInt in v0.17+
-inline fn backing(x: anytype) switch (@typeInfo(@TypeOf(x))) {
+pub inline fn backing(x: anytype) switch (@typeInfo(@TypeOf(x))) {
     .int => @TypeOf(x),
     .@"struct" => |s| s.backing_integer.?,
     else => @compileError(""),
@@ -324,6 +324,33 @@ pub const Item = packed struct(u68) {
         if (wings) return .{ b.unmove_to(old_pos, old_facing), b.unmove_to_hovering(old_pos, old_facing) };
         return .{b.unmove_to(old_pos, old_facing)};
     }
+    // only a state standing on broken glass has breaking predecessors
+    pub fn predecessors_nonbreaking(b: Item, tilecount: u6) [5]?Item {
+        // ignore cant_z
+        if (wings) @compileError("not implemented");
+        var ret: [5]?Item = @splat(null);
+        if (b.can_Z(tilecount)) {
+            ret[0] = b.do_action(.Z, tilecount);
+            ret[0].?.cant_z = false;
+        }
+        if (b.hovering == 0 and b.at(b.gray) == .Empty) return ret; // unmoving unbreaks glass here
+        // unmoving doesn't unbreak glass
+        for ([4]Facing{ .U, .L, .R, .D }, 1..) |old_facing, i| {
+            // unmove function handles invalid move predecessors
+            ret[i] = b.unmove_to_old_facing(old_facing)[0];
+        }
+        return ret;
+    }
+    pub fn predecessors_breaking(b: Item) [4]?Item {
+        if (wings) @compileError("not implemented");
+        var ret: [4]?Item = @splat(null);
+        if (b.hovering != 0 or b.at(b.gray) != .Empty) return ret;
+        for ([4]Facing{ .U, .L, .R, .D }, 0..) |old_facing, i| {
+            ret[i] = b.unmove_to_old_facing(old_facing)[0];
+        }
+        return ret;
+    }
+    //
     pub fn reverse(b: Item, a: Action) if (wings) [2]?Item else [1]?Item {
         switch (a) {
             .Z => { // symmetrical
