@@ -28,6 +28,7 @@ Requires `zig` 0.16 to run.
 It uses a simple variable-length diff compression that achieves an average of 4-5 bytes/state.
 Running it to a minimum tilecount of 22 consumes about 38GB of disk space, finishing in around 3 hours.
 Further running with a minimum tilecount of 21 consumes an additional 101GB disk space (for a total of 139GB) and finishes in around 12 hours.
+Further running with a minimum tilecount of 20 consumes an additional 327GB disk space (for a total of 466GB) and finishes in around one week (>120 hours, only ~15% of which is spent executing instructions (user+sys)).
 
 Since all unique reachable states are stored persistently in `b053-data/`,
 they can then later be queried for certain properties like matching a certain brand.
