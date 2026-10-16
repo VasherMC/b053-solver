@@ -436,6 +436,19 @@ pub const Item = packed struct(u68) {
         // don't count stairs in tiles
         return @popCount(b.tiles) - @as(u6, if (stairs_tile) 1 else 0);
     }
+    pub fn as_Board(b: Item, tilecount: u6) brand.Board {
+        return .{
+            .facing = b.facing,
+            .tiles = b.tiles,
+            .gray = b.gray,
+            .solid1 = b.solid1,
+            .solid2 = b.solid2,
+            .solid3 = b.solid3,
+            .stairs = b.stairs,
+            .pocket = @intCast(tilecount - @popCount(b.tiles)),
+            .hovering = b.hovering,
+        };
+    }
 };
 
 pub fn can_Z_base(pocket: u6, gray: Pos, facing: Facing, tiles: u35, stairs: u6) bool {
