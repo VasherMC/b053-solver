@@ -224,6 +224,15 @@ pub const Item = packed struct(u68) {
             .Glass, .Stairs => return null, // couldnt have come from there
             else => {},
         }
+        // Note this forward-looking check is technically invalid for starting states
+        // i.e. it disallows unmoving to `b053` because of the glass behind gray
+        // we can accept this for now but still mark this TODO
+        const new_behind = move_by(p, f.reverse());
+        if (new_behind == p) return null; // would back into a wall or rock
+        switch (b.at(new_behind)) {
+            .Glass, .Stairs => return null, // couldnt have come from there
+            else => {},
+        }
         // if we weren't hovering, we moved onto glass and broke it
         const unmoving_from_glass = b.at(b.gray) == .Empty and b.hovering == 0;
         const new_glass: u35 = if (unmoving_from_glass) @as(u35, 1) << b.gray else 0;
@@ -330,6 +339,7 @@ pub const Item = packed struct(u68) {
     pub fn predecessors_nonbreaking(b: Item, tilecount: u6) [5]?Item {
         // ignore cant_z
         if (wings) @compileError("not implemented");
+        if (endless) @compileError("no b053-data for endless yet");
         var ret: [5]?Item = @splat(null);
         if (b.can_Z(tilecount)) {
             ret[0] = b.do_action(.Z, tilecount);
