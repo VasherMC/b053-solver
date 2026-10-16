@@ -1,9 +1,10 @@
 /// Solver for B023
 const std = @import("std");
+const base = @import("brand.zig");
 
-pub const Facing = enum(u2) { U, L, R, D };
-pub const Action = enum(u3) { Z, U, L, R, D };
-pub const Pos = u6;
+pub const Facing = base.Facing;
+pub const Action = base.Action;
+pub const Pos = base.Pos;
 
 const endless = true;
 const wings = false;
@@ -166,14 +167,15 @@ pub const Board = packed struct(u54) {
 };
 
 // B023 has no blockers
-pub fn move_by(p: Pos, f: Facing) Pos {
-    return switch (f) {
-        .U => if (p > 29) p else p + 6,
-        .L => if (p % 6 == 5) p else p + 1,
-        .R => if (p % 6 == 0) p else p - 1,
-        .D => if (p < 6) p else p - 6,
-    };
-}
+const move_by = base.default_move_by;
+//pub fn move_by(p: Pos, f: Facing) Pos {
+//    return switch (f) {
+//        .U => if (p > 29) p else p + 6,
+//        .L => if (p % 6 == 5) p else p + 1,
+//        .R => if (p % 6 == 0) p else p - 1,
+//        .D => if (p < 6) p else p - 6,
+//    };
+//}
 
 pub const add_tile: u36 = 0b100001_000110_011111_111110_011000_100001;
 pub const gor_tile: u36 = 0b001100_001100_100100_110001_111100_111100;

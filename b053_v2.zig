@@ -5,19 +5,12 @@
 // so we use u35 to track tiles instead of u36
 
 const std = @import("std");
+const base = @import("brand.zig");
 
-pub const Facing = enum(u2) { U, L, R, D };
-pub const Action = enum(u3) { Z, U, L, R, D };
-pub const Pos = u6;
-pub const Tile = enum(u2) {
-    Empty = 0b00,
-    Stairs = 0b01,
-    Glass = 0b10,
-    Tile = 0b11,
-    inline fn walkable(t: Tile) u1 {
-        return @intCast(@intFromEnum(t) >> 1);
-    }
-};
+pub const Facing = base.Facing;
+pub const Action = base.Action;
+pub const Pos = base.Pos;
+pub const Tile = base.Tile;
 
 const orig_Board = @import("b053.zig").Board;
 pub const endless = false;

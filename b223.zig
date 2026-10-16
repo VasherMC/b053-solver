@@ -1,9 +1,10 @@
 /// Solver for Trailer brand on B223 with Wings and Endless Rod
 const std = @import("std");
+const base = @import("brand.zig");
 
-pub const Facing = enum(u2) { U, L, R, D };
-pub const Action = enum(u3) { Z, U, L, R, D };
-pub const Pos = u6; // 32 positions
+pub const Facing = base.Facing;
+pub const Action = base.Action;
+pub const Pos = base.Pos; // only use 32 positions
 
 /// Least significant to most significant bits
 pub const Board = packed struct(u48) {

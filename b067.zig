@@ -1,8 +1,9 @@
 /// Solver for B067
 const std = @import("std");
+const base = @import("brand.zig");
 
-pub const Facing = enum(u2) { U, L, R, D };
-pub const Action = enum(u3) { Z, U, L, R, D };
+pub const Facing = base.Facing;
+pub const Action = base.Action;
 fn backwards(f: Action) Facing {
     return switch (f) {
         .U => .D,
@@ -12,7 +13,7 @@ fn backwards(f: Action) Facing {
         else => unreachable,
     };
 }
-pub const Pos = u6;
+pub const Pos = base.Pos;
 inline fn can_see(p1: Pos, p2: Pos) ?Action {
     // assumes no obstructions
     // are they in the same column?
