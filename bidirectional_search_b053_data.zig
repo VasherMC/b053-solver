@@ -110,8 +110,23 @@ fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir, deb
     return false;
 }
 
+fn check_specific_goal_matching(backwards_states: []Item, goal: Item, goal_tilecount: u6) bool {
+    if (goal.cant_z) unreachable;
+    for (backwards_states) |bw| {
+        if (bfs.backing(bw) ^ bfs.backing(goal) == 0) {
+            std.debug.print("Found a path from forward goal state {}\n{f}", .{ goal, goal.as_Board(goal_tilecount) });
+            return true;
+        }
+    }
+    std.debug.print("Did not find a path\n", .{});
+    return false;
+}
+
 // run the backwards portion of the bidirectional search
-fn bidi(start: anytype, start_tilecount: u6, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, debug: bool) !bool {
+fn bidi(start: anytype, start_tilecount: u6, alloc: std.mem.Allocator, io: std.Io, dir: ?std.Io.Dir, goal: ?Item, goal_tilecount: ?u6, debug: bool) !bool {
+    if ((dir == null) == (goal == null)) return error.InvalidArguments;
+    if ((goal == null) != (goal_tilecount == null)) return error.InvalidArguments;
+    if (goal != null and goal.?.cant_z) return error.InvalidArguments;
     var states: std.ArrayList(Item) = .empty;
     var next_states = switch (@TypeOf(start)) {
         u35 => try possible_end_states(start, alloc), // all possible arrangements of the brand
@@ -122,9 +137,10 @@ fn bidi(start: anytype, start_tilecount: u6, alloc: std.mem.Allocator, io: std.I
         },
         else => comptime unreachable,
     };
+    const end_tilecount = if (goal == null) data_complete_tiles else goal_tilecount.?;
     // we ignore depth here
     // since end states can have either parity, just implement something simple first and optimize later
-    for (start_tilecount..data_complete_tiles) |tilecount| {
+    for (start_tilecount..end_tilecount) |tilecount| {
         if (debug) std.debug.print("generating states for tilecount {}\n", .{tilecount});
         // finish generating states for the tilecount with nonbreaking moves
         // we have an initial set of states for the tilecount
@@ -184,7 +200,9 @@ fn bidi(start: anytype, start_tilecount: u6, alloc: std.mem.Allocator, io: std.I
     std.debug.print("checking if any states match (have {} states)...\n", .{next_states.items.len});
     // now we have the list of next_states (breaking moves only) for the desired tilecount
     defer next_states.deinit(alloc);
-    return try check_any_matching(next_states.items, io, dir, debug);
+    if (goal != null) {
+        return check_specific_goal_matching(next_states.items, goal.?, goal_tilecount.?);
+    } else return try check_any_matching(next_states.items, io, dir.?, debug);
 }
 
 test "trailer brand intermediate" {
@@ -243,11 +261,11 @@ test "trailer brand intermediate" {
     try f.close(std.testing.io);
     // run the test
     std.debug.print("----- Searching from tilecount 19 back to b053-data/{}\n", .{data_complete_tiles});
-    try std.testing.expect(try bidi(trailer_brand_19, 19, std.testing.allocator, std.testing.io, dir, false));
+    try std.testing.expect(try bidi(trailer_brand_19, 19, std.testing.allocator, std.testing.io, dir, null, null, false));
     std.debug.print("----- Searching from tilecount 16 back to b053-data/{}\n", .{data_complete_tiles});
-    try std.testing.expect(try bidi(trailer_brand_16, 16, std.testing.allocator, std.testing.io, dir, false));
+    try std.testing.expect(try bidi(trailer_brand_16, 16, std.testing.allocator, std.testing.io, dir, null, null, false));
     std.debug.print("----- Searching from tilecount 14 back to b053-data/{}\n", .{data_complete_tiles});
-    try std.testing.expect(try bidi(trailer_brand_14, 14, std.testing.allocator, std.testing.io, dir, false));
+    try std.testing.expect(try bidi(trailer_brand_14, 14, std.testing.allocator, std.testing.io, dir, null, null, false));
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -255,6 +273,6 @@ pub fn main(init: std.process.Init) !void {
     const dir = try std.Io.Dir.cwd().openDir(io, "b053-data", .{ .iterate = true });
     for ([2]u35{ brand.bee_tile, brand.add_tile }, [2][]const u8{ "Bee", "Add" }) |tile, name| {
         std.debug.print("\nRunning backwards search from {s}'s brand\n", .{name});
-        if (try bidi(tile, @popCount(tile), init.gpa, io, dir, true)) std.debug.print("\nFound a path for {s}!\n\n", .{name});
+        if (try bidi(tile, @popCount(tile), init.gpa, io, dir, null, null, true)) std.debug.print("\nFound a path for {s}!\n\n", .{name});
     }
 }
