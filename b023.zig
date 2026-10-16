@@ -2,6 +2,7 @@
 const std = @import("std");
 
 pub const Facing = enum(u2) { U, L, R, D };
+pub const Action = enum(u3) { Z, U, L, R, D };
 pub const Pos = u6;
 
 const endless = true;
@@ -163,8 +164,6 @@ pub const Board = packed struct(u54) {
         return b.stairs >= 36;
     }
 };
-
-pub const Action = enum(u3) { Z, U, L, R, D };
 
 // B023 has no blockers
 pub fn move_by(p: Pos, f: Facing) Pos {

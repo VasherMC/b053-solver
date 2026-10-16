@@ -7,6 +7,7 @@
 const std = @import("std");
 
 pub const Facing = enum(u2) { U, L, R, D };
+pub const Action = enum(u3) { Z, U, L, R, D };
 pub const Pos = u6;
 pub const Tile = enum(u2) {
     Empty = 0b00,
@@ -319,8 +320,6 @@ pub const Board = packed struct(BT) {
         return p;
     }
 };
-
-pub const Action = enum(u3) { Z, U, L, R, D };
 
 /// Grid movement (prevent wrapping etc)
 pub fn move_by(p: Pos, f: Facing) Pos {

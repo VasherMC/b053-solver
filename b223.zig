@@ -2,6 +2,7 @@
 const std = @import("std");
 
 pub const Facing = enum(u2) { U, L, R, D };
+pub const Action = enum(u3) { Z, U, L, R, D };
 pub const Pos = u6; // 32 positions
 
 /// Least significant to most significant bits
@@ -133,8 +134,6 @@ pub const Board = packed struct(u48) {
         return prev == .Z or (fw == b.gray) or ((b.pocket == 0) and (tile == 0));
     }
 };
-
-pub const Action = enum(u3) { Z, U, L, R, D };
 
 /// Grid movement (prevent wrapping etc)
 /// B223 has all corners blocked by statues

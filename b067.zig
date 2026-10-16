@@ -2,6 +2,7 @@
 const std = @import("std");
 
 pub const Facing = enum(u2) { U, L, R, D };
+pub const Action = enum(u3) { Z, U, L, R, D };
 fn backwards(f: Action) Facing {
     return switch (f) {
         .U => .D,
@@ -317,8 +318,6 @@ pub const Board = packed struct(if (endless) u64 else u60) {
         return b.stairs >= 36;
     }
 };
-
-pub const Action = enum(u3) { Z, U, L, R, D };
 
 // B067 has a blocker in the lower left (p=5)
 // we just never return it instead of removing it from the range
