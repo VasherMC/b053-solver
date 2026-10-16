@@ -477,44 +477,40 @@ test "b067_start" {
 }
 test "gor sequence (endless)" {
     if (!endless) return error.SkipZigTest;
-    // manually found
-    const g1 = b067.do_actions("RDZUZUUZRDZLDZUUDZRDZULZLZRZURLZLRZLLDZRZULLRRZDDLZRLUULZDZRLZURRLZDDZLZLUZRZDZDUZRZLDRZDUZ").?;
-    try std.testing.expect(g1.holding_stairs());
-    try std.testing.expect(g1.tiles == gor_tile);
-    const g2 = b067.do_actions("RDZUZUUZRDZLDZUUDZRDZULZLZRZURLZLRZLLDZRZULLRRZDDZLZRULZRULZDDZDDRUZLZDLUZRUZLZLRZDLUZ").?;
-    try std.testing.expect(g2.holding_stairs());
-    try std.testing.expect(g2.tiles == gor_tile);
-    // solver found
-    const g3 = b067.do_actions("RDDLZRUUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZRLZDZDRZUZLZUZLZLRZ").?;
-    try std.testing.expect(g3.holding_stairs());
-    try std.testing.expect(g3.tiles == gor_tile);
-    // solver found post-bugfix
-    const g4 = b067.do_actions("RDZUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZDUZRLZLZRZDDUZRLZ").?;
-    try std.testing.expect(g4.holding_stairs());
-    try std.testing.expect(g4.tiles == gor_tile);
+    for ([4][]const u8{
+        // manually found
+        "RDZUZUUZRDZLDZUUDZRDZULZLZRZURLZLRZLLDZRZULLRRZDDLZRLUULZDZRLZURRLZDDZLZLUZRZDZDUZRZLDRZDUZ",
+        "RDZUZUUZRDZLDZUUDZRDZULZLZRZURLZLRZLLDZRZULLRRZDDZLZRULZRULZDDZDDRUZLZDLUZRUZLZLRZDLUZ",
+        // solver found
+        "RDDLZRUUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZRLZDZDRZUZLZUZLZLRZ",
+        // solver found post-bugfix
+        "RDZUZUUZRDZDZUZLZDZLZUZRZUDZLZDZLZUURZLZDLZRRZLZDZDUZRLZLZRZDDUZRLZ",
+    }) |actions| {
+        try base.verify_brand(b067, gor_tile, actions);
+    }
 }
 test "gor sequence (endless+wings)" {
     if (!endless or !wings) return error.SkipZigTest;
-    // solver found
-    // sword is not helpful
-    const g1 = b067.do_actions("RUUZLLRZLLRZRDDZLZRZRZDZRUZUZDZDLLZLZRZUZLZLZUZRLZDDUZRZ").?;
-    try std.testing.expect(g1.holding_stairs());
-    try std.testing.expect(g1.tiles == gor_tile);
-    const g2 = b067.do_actions("RUUZLLRZLLRZRDDZLZRZRZDZLZLRZRRUZUZDZLLLZLZUZRZLZDZDUZRZ").?;
-    try std.testing.expect(g2.holding_stairs());
-    try std.testing.expect(g2.tiles == gor_tile);
+    for ([2][]const u8{
+        // solver found
+        // sword is not helpful
+        "RUUZLLRZLLRZRDDZLZRZRZDZRUZUZDZDLLZLZRZUZLZLZUZRLZDDUZRZ",
+        "RUUZLLRZLLRZRDDZLZRZRZDZLZLRZRRUZUZDZLLLZLZUZRZLZDZDUZRZ",
+    }) |actions| {
+        try base.verify_brand(b067, gor_tile, actions);
+    }
 }
 test "lev sequence (endless+wings)" {
     if (!endless or !wings) return error.SkipZigTest;
-    // solver found
-    // sword is not helpful
-    const g1 = b067.do_actions("DZURDDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZURRZDDZLUZLZ").?;
-    try std.testing.expect(g1.holding_stairs());
-    try std.testing.expect(g1.tiles == lev_tile);
-    // problem: solver did not find the shorter solution: bug where we stopped exploring too early
-    const g2 = b067.do_actions("DZRDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZRURZDDZLUZLZ").?;
-    try std.testing.expect(g2.holding_stairs());
-    try std.testing.expect(g2.tiles == lev_tile);
+    for ([2][]const u8{
+        // solver found
+        // sword is not helpful
+        "DZURDDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZURRZDDZLUZLZ",
+        // problem: solver did not find the shorter solution: bug where we stopped exploring too early
+        "DZRDLZRZULUZURZDZLZULLZUDZLDZUUZURZDZRZRURZDDZLUZLZ",
+    }) |actions| {
+        try base.verify_brand(b067, lev_tile, actions);
+    }
 }
 
 /// Check whether states are effectively duplicates

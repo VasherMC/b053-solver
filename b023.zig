@@ -444,15 +444,20 @@ test "basic sanity checks from b023_start" {
 
 test "gor action sequences (endless)" {
     if (!endless) return error.SkipZigTest;
-    // manually found
-    try std.testing.expect(b023.do_actions("ZLZRRRZRUZUZDDZDZUUZLULZDLUZDRUZDRRDZLUZLRZLUZULZLZRRLZDDLZRDZLZURRZDZDLUZRZDZLLZUZRZDZDRLZUZ").?.tiles == gor_tile);
-    try std.testing.expect(b023.do_actions("RZUURZRDUZDZDUZDZDZUUDZULULZDZRZLUZDZLUZDRZUZULZLZRRLZDRZDLZDDZUZDLZLUZRZDZRZLDRZRUZ").?.tiles == gor_tile);
-    // solver found
-    try std.testing.expect(b023.do_actions("RUUZDZRZUZLZDLZRZUZURZLZLZLZRRZLZDZRZDZDZRZLLRZDZLLZLUZRRZDZDUZDRZRZLLZRZ").?.tiles == gor_tile);
+    for ([3][]const u8{
+        // manually found
+        "ZLZRRRZRUZUZDDZDZUUZLULZDLUZDRUZDRRDZLUZLRZLUZULZLZRRLZDDLZRDZLZURRZDZDLUZRZDZLLZUZRZDZDRLZUZ",
+        "RZUURZRDUZDZDUZDZDZUUDZULULZDZRZLUZDZLUZDRZUZULZLZRRLZDRZDLZDDZUZDLZLUZRZDZRZLDRZRUZ",
+        // solver found
+        "RUUZDZRZUZLZDLZRZUZURZLZLZLZRRZLZDZRZDZDZRZLLRZDZLLZLUZRRZDZDUZDRZRZLLZRZ",
+    }) |actions| {
+        try base.verify_brand(b023, gor_tile, actions);
+    }
 }
 
 test "dont-place-bottom-stairs" {
     const start = b023.do_actions("URUZ").?;
+    // With the endless rod, if the stairs are at the bottom of the pocket we should never place them
     if (endless) try std.testing.expect(start.do_action(.Z) == null);
     // without endless rod we may need to shuffle the stairs around
     if (!endless) try std.testing.expect(start.do_action(.Z).?.stairs == 32);

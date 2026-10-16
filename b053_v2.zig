@@ -383,24 +383,23 @@ test "Tile" {
 test "Add (wings)" {
     if (!wings) return error.SkipZigTest;
     for ([2][]const u8{
+        // manually found, by Cyre
         "DLLDDRDRZRRURULUULLDLZRURRLZLRZRZDZUZUDZLLDLZRURRZLLRZLDLZLDUZUDZRRLZRURZLZDLDZURURZLZDLUZDZRUZLUDZRRLZRZUDRZR",
+        // manually found (inspired by endless solution)
         "ZLLRRLZURZDZRRZUDLLRZLLLRZLDDDDUZUUZDDZDRRZRRURU",
     }) |actions| {
-        const p = b053.do_actions(actions).?;
-        try std.testing.expect(p.tiles == add_tile);
-        try std.testing.expect(p.holding_stairs());
+        try base.verify_brand(b053, add_tile, actions);
     }
 }
 
 test "Add (endless)" {
     if (!endless) return error.SkipZigTest;
     for ([3][]const u8{
+        // manually found
         "ZRZLUDZRZRZLZRZRDZUUDZLLRZLZURZDLLZRZLZRZLLRZLZRZLDUUDZDZURLZLRZDZDZUZLRDZUZDDZUZDZUZDDRZLUUZDZUZDZUUZDDUZDZUZDRLLRZRZRRZD",
         "ZRZLUDZRZRZLZRZRDZUUDZLLRZLZURZDLLZRZLZRZLLRZLZRZLDUUDZDZURLZLRZDZDZUZLRDZDZUZDZUZDRZLDRZLUUDZLRZRRRZD",
         "ZRZLUDZRZRZLZRZRDZUUDZLLRZLZURZDLLZRZLZRZLLDZURZLUDZRZLLRZDZDZUZLRDZDZUZDZUZDRZLDRZLUUDZLRZRRRZD",
     }) |actions| {
-        const p = b053.do_actions(actions).?;
-        try std.testing.expect(p.tiles == add_tile);
-        try std.testing.expect(p.holding_stairs());
+        try base.verify_brand(b053, add_tile, actions);
     }
 }

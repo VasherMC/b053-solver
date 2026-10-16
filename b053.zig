@@ -289,9 +289,7 @@ test "trailer burdenless" {
         "ZURDDUZRZLLRZRLZURLDZDDUUZDZDUZDZDZUUZDDUZDZDRLUUDZUZDRZLUDZUUDZURLZDUZDLUZRLZRZRZLDUZUDZLZLUZDRRZLLRZLDUZLRZUDZULRZDUZDDDUUZDZDZUUZDDLRZULRZUDZRLZUUZ",
         "ZURDDUZRZLLRZRLZURLDZDDUUZDZDUZDZDZUUZDDUZDZDRLUUDZUZDRZLUDZUUDZURLZDUZDZULZRZRZLDUZUDZLZLUZDRRZLLRZLDUZULDRZUDZDDUUZDZLDRDURZLUUZDZRLZUZ",
     }) |path| {
-        const p = b053.do_actions(path).?;
-        try std.testing.expect(p.tiles == trailer_tile);
-        try std.testing.expect(p.holding_stairs());
+        try base.verify_brand(b053, trailer_tile, path);
     }
 }
 
