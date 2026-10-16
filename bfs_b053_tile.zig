@@ -99,15 +99,19 @@ fn trace_path_files(io: std.Io, end: Item, finalized: []const std.ArrayList(Item
                 .D => 'D',
             },
         })});
-        const t = cur.b.reverse(cur.p);
-        inline for (t) |ti| if (ti == b053) return;
-        if (brand.allow_wings) @compileLog("TODO: fix wings logic here");
-        b = t[0].?;
-        if (b.tileCount() == cur.b.tileCount()) {
-            // parent should be in `finalized[depth-1]`
-            const idx = std.sort.binarySearch(Item, finalized[cur.d - 1].items, b, board_item_cmp).?;
-            cur = finalized[cur.d - 1].items[idx];
-        }
+        const ts = cur.b.reverse(cur.p);
+        for (ts) |tv| {
+            if (tv) |t| {
+                if (t == b053) return;
+                b = t;
+                if (b.tileCount() == cur.b.tileCount()) {
+                    // parent should be in `finalized[depth-1]`
+                    const idx = std.sort.binarySearch(Item, finalized[cur.d - 1].items, b, board_item_cmp).?;
+                    cur = finalized[cur.d - 1].items[idx];
+                }
+                break;
+            }
+        } else @panic("no valid predecessor");
     }
     std.debug.print("searching files for state: {}\n", .{b});
     var tiles = b.tileCount();
@@ -119,8 +123,8 @@ fn trace_path_files(io: std.Io, end: Item, finalized: []const std.ArrayList(Item
     var offsetEnd = total_pages * file_format.PAGE_SIZE;
     try read.seekTo(offsetEnd);
     var total_items = try read.interface.peekInt(u64, native_endian);
+    var idx = try search_file(io, file, total_pages, b) orelse @panic("Couldn't find state in visited set");
     while (b != b053) {
-        const idx = try search_file(io, file, total_pages, b) orelse @panic("Couldn't find state in visited set");
         const last_action_offset = total_pages * file_format.PAGE_SIZE + 8 + total_items + @divFloor(idx, 3);
         // reset reader
         try read.seekTo(last_action_offset);
@@ -140,18 +144,38 @@ fn trace_path_files(io: std.Io, end: Item, finalized: []const std.ArrayList(Item
                 .D => 'D',
             },
         })});
-        const r = b.reverse(last_action);
-        if (r.tileCount() > b.tileCount()) {
-            file.close(io);
-            //
-            tiles = r.tileCount();
-            file = try openFileFor(io, tiles);
-            total_pages = try read.interface.peekInt(u64, native_endian);
-            offsetEnd = total_pages * file_format.PAGE_SIZE;
-            try read.seekTo(offsetEnd);
-            total_items = try read.interface.peekInt(u64, native_endian);
+        const rs = b.reverse(last_action);
+        // first check nonbreaking moves that stay in same tilecount (predecessor must actually exist)
+        for (rs) |rv| {
+            if (rv) |r| if (r.tileCount() == b.tileCount()) {
+                idx = try search_file(io, file, total_pages, r) orelse continue;
+                b = r;
+                break;
+            };
+        } else {
+            // check remaining (breaking) moves
+            for (rs) |rv| {
+                if (rv) |r| {
+                    std.debug.assert(r.tileCount() > b.tileCount());
+                    file.close(io);
+                    //
+                    tiles = r.tileCount();
+                    file = try openFileFor(io, tiles);
+                    total_pages = try read.interface.peekInt(u64, native_endian);
+                    offsetEnd = total_pages * file_format.PAGE_SIZE;
+                    try read.seekTo(offsetEnd);
+                    total_items = try read.interface.peekInt(u64, native_endian);
+                    if (try search_file(io, file, total_pages, b)) |new_idx| {
+                        idx = new_idx;
+                        b = r;
+                        break;
+                    } else continue;
+                }
+            } else {
+                std.debug.print("no valid predecessor move from state {}\n", .{b});
+                @panic("no valid predecessor");
+            }
         }
-        b = r; // r[1] orelse r[0].?;
     }
 }
 fn boardCmp(a: Board, b: Board) std.math.Order {
