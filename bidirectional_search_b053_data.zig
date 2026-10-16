@@ -213,6 +213,39 @@ test "trailer brand intermediate" {
     trailer_brand_19_cant_z.cant_z = true;
     try std.testing.expect(trailer_brand_19_cant_z == bfs.b053.do_actions("ZURDDUZRZLLRZRLZURLDZDDUUZDZDUZDZDZUUZDDUZDZDRLUUDZUZDRZLUDZUUDZURLZDUZDLUZRLZRZRZLDUZUDZLZLUZDRRZ", bfs.b053.empty_pocket_tilecount()).?);
     //..."LLRZLDUZLRZUDZULRZDUZDDDUUZDZDZUUZDDLRZULRZUDZRLZUUZ",
+    var last_19 = trailer_brand_19.do_actions("LLRZL", 19).?;
+    last_19.cant_z = false;
+    //
+    if (false) {
+        // test every step for a while
+        var last_19_next = last_19.do_action_breaking(.D, 19).?;
+        last_19_next.cant_z = false;
+        std.debug.print("testing state\n", .{});
+        last_19_next.as_Board(18).print();
+        try std.testing.expect(try bidi(last_19_next, 18, std.testing.allocator, std.testing.io, null, last_19, 19, false));
+        const tc_18 = "DUZ";
+        const tc_17 = "LRZUDZU";
+        for (tc_18[1..]) |c| {
+            last_19_next = last_19_next.do_action_nonbreaking(.from(c), 18).?;
+            //last_19_next.cant_z = false;
+            std.debug.print("testing state\n", .{});
+            last_19_next.as_Board(18).print();
+            try std.testing.expect(try bidi(last_19_next, 18, std.testing.allocator, std.testing.io, null, last_19, 19, false));
+        }
+        last_19_next = last_19_next.do_action_breaking(.L, 18).?;
+        last_19_next.cant_z = false;
+        std.debug.print("testing state\n", .{});
+        last_19_next.as_Board(17).print();
+        try std.testing.expect(try bidi(last_19_next, 17, std.testing.allocator, std.testing.io, null, last_19, 19, false));
+        for (tc_17[1..]) |c| {
+            last_19_next = last_19_next.do_action_nonbreaking(.from(c), 17).?;
+            //last_19_next.cant_z = false;
+            std.debug.print("testing state\n", .{});
+            last_19_next.as_Board(17).print();
+            try std.testing.expect(try bidi(last_19_next, 17, std.testing.allocator, std.testing.io, null, last_19, 19, false));
+        }
+    }
+    //
     const trailer_brand_16 = Item{
         .tiles = 0b100001_010000_010010_110011_111000_11110,
         .facing = .R,
@@ -228,6 +261,10 @@ test "trailer brand intermediate" {
     trailer_brand_16_cant_z.cant_z = true;
     try std.testing.expect(trailer_brand_16_cant_z == trailer_brand_19.do_actions("LLRZLDUZLRZUDZULRZ", 19).?);
     // ..."DUZDDDUUZDZDZUUZDDLRZULRZUDZRLZUUZ",
+    var last_16 = trailer_brand_16.do_actions("DUZDD", 16).?;
+    last_16.cant_z = false;
+    try std.testing.expect(last_16.do_action_breaking(.D, 16) != null);
+    //
     const trailer_brand_14 = Item{
         .tiles = 0b100001_010000_010010_110011_011000_10110,
         .facing = .R,
@@ -240,6 +277,14 @@ test "trailer brand intermediate" {
         .cant_z = false,
     };
     try std.testing.expect(trailer_brand_14 == trailer_brand_16.do_actions("DUZDDDUUZDZDZUUZDDLR", 16).?);
+
+    // single-state backwards searches to verify that we can backsearch individual states
+    std.debug.print("----- Searching from tilecount 16 back to 19\n", .{});
+    try std.testing.expect(try bidi(trailer_brand_16, 16, std.testing.allocator, std.testing.io, null, last_19, 19, false));
+    std.debug.print("----- Searching from tilecount 14 back to 16\n", .{});
+    try std.testing.expect(try bidi(trailer_brand_14, 14, std.testing.allocator, std.testing.io, null, last_16, 16, false));
+    std.debug.print("----- Searching from tilecount 16 back to 19 (2)\n", .{});
+    try std.testing.expect(try bidi(last_16, 16, std.testing.allocator, std.testing.io, null, last_19, 19, false));
 
     const dir = try std.Io.Dir.cwd().openDir(std.testing.io, "b053-data", .{ .iterate = true });
     // skip if we don't have data at reasonable depth for the supposed data_complete_tiles tilecount
