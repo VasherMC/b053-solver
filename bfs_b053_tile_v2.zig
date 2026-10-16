@@ -378,6 +378,27 @@ pub const Item = packed struct(u68) {
             },
         }
     }
+    pub fn do_actions(b: Item, actions: []const u8, start_tilecount: u6) ?Item {
+        var p = b;
+        var tilecount = start_tilecount;
+        for (actions) |c| {
+            const a: Action = switch (c) {
+                'Z' => .Z,
+                'U' => .U,
+                'L' => .L,
+                'R' => .R,
+                'D' => .D,
+                else => unreachable,
+            };
+            if (p.do_action_nonbreaking(a, tilecount)) |next| {
+                p = next;
+            } else if (p.do_action_breaking(a, tilecount)) |next| {
+                p = next;
+                tilecount -= 1;
+            } else return null;
+        }
+        return p;
+    }
     pub fn get_pocket(b: Item, tilecount: u6) u6 {
         // things in pocket (includes stairs)
         if (stairs_tile) {
@@ -471,7 +492,7 @@ const Item2 = packed struct(u64) {
     }
 };
 
-const b053 = Item{
+pub const b053 = Item{
     .facing = brand.b053.facing,
     .cant_z = false,
     .gray = brand.b053.gray,

@@ -194,6 +194,7 @@ fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !
 }
 
 test "trailer brand intermediate" {
+    // see trailer brand solution #2 in b053.zig
     const trailer_brand_19 = Item{
         .tiles = 0b100001_100000_111110_110011_111000_11110,
         .facing = .R,
@@ -205,6 +206,10 @@ test "trailer brand intermediate" {
         .hovering = 0,
         .cant_z = false,
     };
+    var trailer_brand_19_cant_z = trailer_brand_19;
+    trailer_brand_19_cant_z.cant_z = true;
+    try std.testing.expect(trailer_brand_19_cant_z == bfs.b053.do_actions("ZURDDUZRZLLRZRLZURLDZDDUUZDZDUZDZDZUUZDDUZDZDRLUUDZUZDRZLUDZUUDZURLZDUZDLUZRLZRZRZLDUZUDZLZLUZDRRZ", bfs.b053.empty_pocket_tilecount()).?);
+    //..."LLRZLDUZLRZUDZULRZDUZDDDUUZDZDZUUZDDLRZULRZUDZRLZUUZ",
     const trailer_brand_16 = Item{
         .tiles = 0b100001_010000_010010_110011_111000_11110,
         .facing = .R,
@@ -216,6 +221,10 @@ test "trailer brand intermediate" {
         .hovering = 0,
         .cant_z = false,
     };
+    var trailer_brand_16_cant_z = trailer_brand_16;
+    trailer_brand_16_cant_z.cant_z = true;
+    try std.testing.expect(trailer_brand_16_cant_z == trailer_brand_19.do_actions("LLRZLDUZLRZUDZULRZ", 19).?);
+    // ..."DUZDDDUUZDZDZUUZDDLRZULRZUDZRLZUUZ",
     const trailer_brand_14 = Item{
         .tiles = 0b100001_010000_010010_110011_011000_10110,
         .facing = .R,
@@ -227,6 +236,8 @@ test "trailer brand intermediate" {
         .hovering = 0,
         .cant_z = false,
     };
+    try std.testing.expect(trailer_brand_14 == trailer_brand_16.do_actions("DUZDDDUUZDZDZUUZDDLR", 16).?);
+
     const dir = try std.Io.Dir.cwd().openDir(std.testing.io, "b053-data", .{ .iterate = true });
     var buf: [20]u8 = undefined;
     const fname = try bfs.setFilenameFor(buf[0..], data_complete_tiles, 150);
