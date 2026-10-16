@@ -203,6 +203,7 @@ test "compressedStream8" {
         next.appendAssumeCapacity(result);
         try w.write(result, alloc);
     }
+    r = stream.reader(); // reader takes a snapshot, so we need a new reader after any writes
     for (next.items) |item| {
         const pk = r.peek().?;
         const compr = r.pop().?;
@@ -237,7 +238,7 @@ fn trace_path_partitioned(alloc: std.mem.Allocator, seen_streams: []const compre
             else => .from(b.facing),
         });
         const r = b.reverse(last_action);
-        b = r; // r[1] orelse r[0].?;
+        b = if (r.len == 2) (r[1] orelse r[0].?) else r[0].?;
     }
     for (0..path.items.len) |j| {
         const a = path.items[path.items.len - 1 - j];
