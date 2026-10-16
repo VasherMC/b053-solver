@@ -21,8 +21,20 @@ fn print_all(io: std.Io, dir: std.Io.Dir, tilecount: u6, depth: u16) !void {
 }
 
 fn collect_stairs(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecount: u6) !usize {
-    var stairs: [230]std.ArrayList(u35) = @splat(.empty);
-    for (0..230) |depth| {
+    // check if stairs data was already generated
+    // (delete/move the file to force regeneration)
+    var fnamebuf: [20]u8 = undefined;
+    const out_fname = try std.fmt.bufPrint(&fnamebuf, "{}.stairs", .{tilecount});
+    if (dir.access(io, out_fname, .{})) {
+        return 0; // already exists
+    } else |err| switch (err) {
+        error.FileNotFound => {}, // continue
+        else => return err,
+    }
+    // collect the stairs data
+    var stairs: [250]std.ArrayList(u35) = @splat(.empty);
+    var have_any_stairs: bool = false;
+    for (0..250) |depth| {
         var buf: [20]u8 = undefined;
         const fname = try bfs.setFilenameFor(buf[0..], tilecount, @intCast(depth));
         var f = try bfs.mappedStateStream.init(io, dir, fname) orelse continue;
@@ -47,16 +59,17 @@ fn collect_stairs(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecou
         }
         stairs[depth].shrinkAndFree(alloc, write_i);
         std.debug.print("{} brands at depth {}\n", .{ write_i, depth });
+        if (stairs[depth].items.len > 0) have_any_stairs = true;
     }
     // write all the states to a file
-    var fnamebuf: [20]u8 = undefined;
-    const out_fname = try std.fmt.bufPrint(&fnamebuf, "{}.stairs", .{tilecount});
-    var file = try dir.createFile(io, out_fname, .{});
-    var writebuf: [1024]u8 = undefined;
-    var w = file.writer(io, writebuf[0..]);
-    for (stairs, 0..) |arr, depth| try writeStairsDepth(&w, @intCast(depth), arr.items);
-    try w.end();
-    file.close(io);
+    if (have_any_stairs) {
+        var file = try dir.createFile(io, out_fname, .{});
+        var writebuf: [1024]u8 = undefined;
+        var w = file.writer(io, writebuf[0..]);
+        for (stairs, 0..) |arr, depth| try writeStairsDepth(&w, @intCast(depth), arr.items);
+        try w.end();
+        file.close(io);
+    }
     //
     //var total: std.ArrayList(u35) = .empty;
     //for (stairs) |arr| {
@@ -90,7 +103,7 @@ fn lessthan_u35(ctx: void, a: u35, b: u35) bool {
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const dir = try std.Io.Dir.cwd().openDir(io, "b053-data", .{ .iterate = true });
-    for (21..32) |tilecount| {
+    for (20..32) |tilecount| {
         _ = try collect_stairs(init.gpa, io, dir, @intCast(tilecount));
     }
 }
