@@ -107,13 +107,7 @@ test "heuristic" {
 
 /// Backtrace path through state space
 fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX_DEPTH]std.ArrayList(Item)) !void {
-    std.debug.print("Found path (reversed): {c}", .{@as(u8, switch (last_move) {
-        .Z => 'Z',
-        .U => 'U',
-        .L => 'L',
-        .R => 'R',
-        .D => 'D',
-    })});
+    std.debug.print("Found path (reversed): {f}", .{last_move});
     defer std.debug.print("\n\n", .{});
     var cur: Item = end;
     var b = end.b;
@@ -204,12 +198,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                             // We don't deduplicate yet because it's unordered
                             const item = Item{ .b = result, .p = switch (a) {
                                 .Z => .Z,
-                                else => switch (b.b.facing) {
-                                    .U => .U,
-                                    .L => .L,
-                                    .R => .R,
-                                    .D => .D,
-                                },
+                                else => .from(b.b.facing),
                             }, .cant_z = !result.can_Z(a) };
                             try todo.append(alloc, item);
                         }
@@ -338,19 +327,9 @@ fn print_state(b: Item) void {
             print{
                 .tiles = orig.tiles,
                 .glass = orig.glass,
-                .pocket = switch (orig.pocket) {
-                    .Empty => .Empty,
-                    .Stairs => .Stairs,
-                    .Glass => .Glass,
-                    .Tile => .Tile,
-                },
+                .pocket = orig.pocket,
                 .gray = orig.gray,
-                .facing = switch (orig.facing) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                },
+                .facing = orig.facing,
                 .prev = b.p,
                 .cant_z = b.cant_z,
             },

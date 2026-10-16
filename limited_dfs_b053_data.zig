@@ -15,13 +15,7 @@ test {
 }
 
 fn print_char(a: bfs.brand.Action) void {
-    std.debug.print("{c}", .{@as(u8, switch (a) {
-        .U => 'U',
-        .L => 'L',
-        .R => 'R',
-        .D => 'D',
-        .Z => 'Z',
-    })});
+    std.debug.print("{f}", .{a});
 }
 
 // need to make sure we don't go in a circle

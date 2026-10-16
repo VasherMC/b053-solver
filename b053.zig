@@ -151,13 +151,7 @@ pub const Board = packed struct(u80) {
                 };
             },
             else => {
-                const new_facing: Facing = switch (a) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                    else => unreachable,
-                };
+                const new_facing: Facing = .from(a);
                 const new_pos = move_by(b.gray, new_facing);
                 return if (new_pos == b.gray) null else b.move_to(new_pos, new_facing);
             },
@@ -178,19 +172,8 @@ pub const Board = packed struct(u80) {
                 return if (allow_wings) .{ result, null } else .{result};
             },
             else => {
-                const old_facing: Facing = switch (a) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                    else => unreachable,
-                };
-                const back_dir: Facing = switch (b.facing) {
-                    .U => .D,
-                    .L => .R,
-                    .R => .L,
-                    .D => .U,
-                };
+                const old_facing: Facing = .from(a);
+                const back_dir: Facing = b.facing.reverse();
                 const old_pos = move_by(b.gray, back_dir);
                 if (allow_wings) return .{ b.unmove_to(old_pos, old_facing), b.unmove_to_hovering(old_pos, old_facing) };
                 return .{b.unmove_to(old_pos, old_facing)};
@@ -213,14 +196,7 @@ pub const Board = packed struct(u80) {
     pub fn do_actions(b: Board, actions: []const u8) ?Board {
         var p = b;
         for (actions) |c| {
-            p = p.do_action(switch (c) {
-                'Z' => .Z,
-                'U' => .U,
-                'L' => .L,
-                'R' => .R,
-                'D' => .D,
-                else => unreachable,
-            }) orelse return null;
+            p = p.do_action(.from(c)) orelse return null;
         }
         return p;
     }

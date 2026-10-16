@@ -81,13 +81,7 @@ pub const Board = packed struct(u48) {
                 };
             },
             else => {
-                const new_facing: Facing = switch (a) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                    else => unreachable,
-                };
+                const new_facing: Facing = .from(a);
                 const new_pos = move_by(b.gray, new_facing);
                 return if (new_pos == b.gray) null else b.move_to(new_pos, new_facing);
             },
@@ -107,19 +101,8 @@ pub const Board = packed struct(u48) {
                 };
             },
             else => {
-                const old_facing: Facing = switch (a) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                    else => unreachable,
-                };
-                const back_dir: Facing = switch (b.facing) {
-                    .U => .D,
-                    .L => .R,
-                    .R => .L,
-                    .D => .U,
-                };
+                const old_facing: Facing = .from(a);
+                const back_dir: Facing = b.facing.reverse();
                 const old_pos = move_by(b.gray, back_dir);
                 return b.unmove_to(old_pos, old_facing);
             },

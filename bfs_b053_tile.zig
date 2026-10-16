@@ -327,12 +327,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator, io: std.Io, start_tiles: u6) !void {
                             // We don't deduplicate here because it's unordered
                             try todo[depth + 1].append(alloc, .{ .b = result, .d = @intCast(depth + 1), .p = switch (a) {
                                 .Z => .Z,
-                                else => switch (b.b.facing) {
-                                    .U => .U,
-                                    .L => .L,
-                                    .R => .R,
-                                    .D => .D,
-                                },
+                                else => .from(b.b.facing),
                             }, .cant_z = !result.can_Z(a) });
                         }
                     }
@@ -398,12 +393,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator, io: std.Io, start_tiles: u6) !void {
                             if (pruning and prune(result)) continue;
                             try todo[depth + 1].append(alloc, .{ .b = result, .d = @intCast(depth + 1), .p = switch (a) {
                                 .Z => .Z,
-                                else => switch (item.b.facing) {
-                                    .U => .U,
-                                    .L => .L,
-                                    .R => .R,
-                                    .D => .D,
-                                },
+                                else => .from(item.b.facing),
                             }, .cant_z = !result.can_Z(a) });
                         }
                     }

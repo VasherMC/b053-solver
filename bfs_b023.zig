@@ -40,13 +40,7 @@ pub fn main(init: std.process.Init) !void {
 
 /// Backtrace path through state space
 fn trace_path(end: Item, last_move: Action, depth: u8, finalized: []const std.ArrayList(Item)) !void {
-    std.debug.print("Found path (reversed): {c}", .{@as(u8, switch (last_move) {
-        .Z => 'Z',
-        .U => 'U',
-        .L => 'L',
-        .R => 'R',
-        .D => 'D',
-    })});
+    std.debug.print("Found path (reversed): {f}", .{last_move});
     defer std.debug.print("\n\n", .{});
     var cur: Item = end;
     var b = end.b;
@@ -174,12 +168,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
                     // We don't deduplicate here because it's unordered
                     try todo.append(alloc, .{ .b = result, .p = switch (a) {
                         .Z => .Z,
-                        else => switch (b.b.facing) {
-                            .U => .U,
-                            .L => .L,
-                            .R => .R,
-                            .D => .D,
-                        },
+                        else => .from(b.b.facing),
                     }, .cant_z = result.cant_Z(a) });
                 }
             }
@@ -195,13 +184,7 @@ const min_heuristic = heuristic(start, goal_tile);
 
 /// Backtrace path through state space
 fn trace_path_2(end: Item, last_move: Action, depth: u8, finalized: []const [MAX_DEPTH]std.ArrayList(Item)) !void {
-    std.debug.print("Found path (reversed): {c}", .{@as(u8, switch (last_move) {
-        .Z => 'Z',
-        .U => 'U',
-        .L => 'L',
-        .R => 'R',
-        .D => 'D',
-    })});
+    std.debug.print("Found path (reversed): {f}", .{last_move});
     defer std.debug.print("\n\n", .{});
     var cur: Item = end;
     var b = end.b;
@@ -284,12 +267,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
                             // We don't deduplicate yet because it's unordered
                             const item = Item{ .b = result, .p = switch (a) {
                                 .Z => .Z,
-                                else => switch (b.b.facing) {
-                                    .U => .U,
-                                    .L => .L,
-                                    .R => .R,
-                                    .D => .D,
-                                },
+                                else => .from(b.b.facing),
                             }, .cant_z = result.cant_Z(a) };
                             try todo.append(alloc, item);
                         }

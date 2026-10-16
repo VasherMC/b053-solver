@@ -9,16 +9,6 @@ test {
     std.testing.refAllDecls(@import("bidirectional_search_b053_data.zig"));
 }
 
-fn print_char(a: bfs.brand.Action) void {
-    std.debug.print("{c}", .{@as(u8, switch (a) {
-        .U => 'U',
-        .L => 'L',
-        .R => 'R',
-        .D => 'D',
-        .Z => 'Z',
-    })});
-}
-
 test "Add end states" {
     const tilecount = @popCount(brand.add_tile);
     var arr = try possible_end_states(brand.add_tile, std.testing.allocator);

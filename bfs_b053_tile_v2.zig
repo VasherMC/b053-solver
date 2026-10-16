@@ -272,25 +272,13 @@ pub const Item = packed struct(u68) {
     }
     pub fn do_action_breaking(b: Item, a: Action, tilecount: u6) ?Item {
         if (a == .Z) return null;
-        const new_facing: Facing = switch (a) {
-            .U => .U,
-            .L => .L,
-            .R => .R,
-            .D => .D,
-            else => unreachable,
-        };
+        const new_facing: Facing = .from(a);
         const new_pos = move_by(b.gray, new_facing);
         return if (new_pos == b.gray) null else if (b.at(new_pos) != .Glass) null else b.move_to(new_pos, new_facing, b.get_pocket(tilecount));
     }
     pub fn do_action_nonbreaking(b: Item, a: Action, tilecount: u6) ?Item {
         if (a == .Z) return do_action(b, a, tilecount);
-        const new_facing: Facing = switch (a) {
-            .U => .U,
-            .L => .L,
-            .R => .R,
-            .D => .D,
-            else => unreachable,
-        };
+        const new_facing: Facing = .from(a);
         const new_pos = move_by(b.gray, new_facing);
         return if (new_pos == b.gray) null else if (b.at(new_pos) == .Glass) null else b.move_to(new_pos, new_facing, b.get_pocket(tilecount));
     }
@@ -312,26 +300,14 @@ pub const Item = packed struct(u68) {
                 };
             },
             else => {
-                const new_facing: Facing = switch (a) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                    else => unreachable,
-                };
+                const new_facing: Facing = .from(a);
                 const new_pos = move_by(b.gray, new_facing);
                 return if (new_pos == b.gray) null else b.move_to(new_pos, new_facing, b.get_pocket(tilecount));
             },
         }
     }
     pub fn unmove_to_old_facing(b: Item, old_facing: Facing) if (wings) [2]?Item else [1]?Item {
-        const back_dir: Facing = switch (b.facing) {
-            .U => .D,
-            .L => .R,
-            .R => .L,
-            .D => .U,
-        };
-        const old_pos = move_by(b.gray, back_dir);
+        const old_pos = move_by(b.gray, b.facing.reverse());
         if (wings) return .{ b.unmove_to(old_pos, old_facing), b.unmove_to_hovering(old_pos, old_facing) };
         return .{b.unmove_to(old_pos, old_facing)};
     }
@@ -378,13 +354,7 @@ pub const Item = packed struct(u68) {
                 return if (wings) .{ result, null } else result;
             },
             else => {
-                return b.unmove_to_old_facing(switch (a) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                    else => unreachable,
-                });
+                return b.unmove_to_old_facing(.from(a));
             },
         }
     }
@@ -392,14 +362,7 @@ pub const Item = packed struct(u68) {
         var p = b;
         var tilecount = start_tilecount;
         for (actions) |c| {
-            const a: Action = switch (c) {
-                'Z' => .Z,
-                'U' => .U,
-                'L' => .L,
-                'R' => .R,
-                'D' => .D,
-                else => unreachable,
-            };
+            const a: Action = .from(c);
             if (p.do_action_nonbreaking(a, tilecount)) |next| {
                 p = next;
             } else if (p.do_action_breaking(a, tilecount)) |next| {
@@ -702,13 +665,7 @@ pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16, tile
                         for (std.enums.values(Action)) |a| {
                             if (a == .Z and (tilecount_diff == 1 or candidate.cant_z or candidate.gray != cur.gray)) continue;
                             if (do_action(candidate, a, new_tilecount)) |result| if (result.cant_z and backing(cur) ^ backing(result) < 4) {
-                                std.debug.print("{c}", .{@as(u8, switch (a) {
-                                    .U => 'U',
-                                    .L => 'L',
-                                    .R => 'R',
-                                    .D => 'D',
-                                    .Z => 'Z',
-                                })});
+                                std.debug.print("{f}", .{a});
                                 cur = candidate;
                                 cur_tilecount = new_tilecount;
                                 continue :outer;
@@ -722,18 +679,8 @@ pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16, tile
             // current action can Z, so previous action wasn't Z
             // also, facing is valid
             // so we know the last move was (FACING)
-            const last_move: Action = switch (cur.facing) {
-                .U => .U,
-                .L => .L,
-                .R => .R,
-                .D => .D,
-            };
-            std.debug.print("{c}", .{@as(u8, switch (cur.facing) {
-                .U => 'U',
-                .L => 'L',
-                .R => 'R',
-                .D => 'D',
-            })});
+            const last_move: Action = .from(cur.facing);
+            std.debug.print("{f}", .{cur.facing});
             // same deal but we already know the action
             inline for (.{ 0, 1 }) |tilecount_diff| {
                 const new_tilecount = cur_tilecount + tilecount_diff;

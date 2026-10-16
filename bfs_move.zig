@@ -234,25 +234,14 @@ fn trace_path_partitioned(alloc: std.mem.Allocator, seen_streams: []const compre
         };
         try path.append(alloc, switch (last_action) {
             .Z => .Z,
-            else => switch (b.facing) {
-                .U => .U,
-                .L => .L,
-                .R => .R,
-                .D => .D,
-            },
+            else => .from(b.facing),
         });
         const r = b.reverse(last_action);
         b = r; // r[1] orelse r[0].?;
     }
     for (0..path.items.len) |j| {
         const a = path.items[path.items.len - 1 - j];
-        std.debug.print("{c}", .{@as(u8, switch (a) {
-            .Z => 'Z',
-            .U => 'U',
-            .L => 'L',
-            .R => 'R',
-            .D => 'D',
-        })});
+        std.debug.print("{f}", .{a});
     }
     std.debug.print("\n\n", .{});
 }
@@ -409,12 +398,7 @@ fn run_bfs_partition2(alloc: std.mem.Allocator, io: std.Io) !void {
                         //
                         try parents[bin].append(alloc, switch (a) {
                             .Z => .Z,
-                            else => switch (b.facing) { // our previous facing
-                                .U => .U,
-                                .L => .L,
-                                .R => .R,
-                                .D => .D,
-                            },
+                            else => .from(b.facing), // our previous facing
                         });
                     }
                 }

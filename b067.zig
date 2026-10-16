@@ -5,13 +5,7 @@ const base = @import("brand.zig");
 pub const Facing = base.Facing;
 pub const Action = base.Action;
 fn backwards(f: Action) Facing {
-    return switch (f) {
-        .U => .D,
-        .L => .R,
-        .R => .L,
-        .D => .U,
-        else => unreachable,
-    };
+    return .reverse(.from(f));
 }
 pub const Pos = base.Pos;
 inline fn can_see(p1: Pos, p2: Pos) ?Action {
@@ -165,13 +159,7 @@ pub const Board = packed struct(if (endless) u64 else u60) {
                 };
             },
             else => {
-                const new_facing: Facing = switch (a) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                    else => unreachable,
-                };
+                const new_facing: Facing = .from(a);
                 const new_pos = move_by(b.gray, new_facing);
                 return if (new_pos == b.gray) null else if (b.move_to(new_pos, new_facing)) |result| result.update_beaver() else null;
             },
@@ -194,19 +182,8 @@ pub const Board = packed struct(if (endless) u64 else u60) {
                 //if (sword and b.beaver.p == 36) result.append(...);
             },
             else => {
-                const old_facing: Facing = switch (a) {
-                    .U => .U,
-                    .L => .L,
-                    .R => .R,
-                    .D => .D,
-                    else => unreachable,
-                };
-                const back_dir: Facing = switch (b.facing) {
-                    .U => .D,
-                    .L => .R,
-                    .R => .L,
-                    .D => .U,
-                };
+                const old_facing: Facing = .from(a);
+                const back_dir: Facing = b.facing.reverse();
                 const old_pos = move_by(b.gray, back_dir);
                 return b.unmove_to(old_pos, old_facing);
             },
@@ -223,12 +200,7 @@ pub const Board = packed struct(if (endless) u64 else u60) {
                 var x = bv;
                 x.beaver.p = forward_if_Z; // facing remains same (is retained on death)
                 for (std.enums.values(Action)) |f| {
-                    if (f != @as(Action, switch (b_end.facing) { // couldn't have sworded beaver facing away from gray
-                        .U => .U,
-                        .L => .L,
-                        .R => .R,
-                        .D => .D,
-                    })) {
+                    if (f != Action.from(b_end.facing)) { // couldn't have sworded beaver facing away from gray
                         x.beaver.facing = f;
                         if (x.do_action(.Z) != b_end) @panic("bad logic");
                         result[s] = x;
@@ -238,12 +210,7 @@ pub const Board = packed struct(if (endless) u64 else u60) {
             }
             // handle normal additions
             const pb = bv.reverse(a);
-            if (pb.do_action(if (a == .Z) .Z else switch (b_end.facing) {
-                .U => .U,
-                .L => .L,
-                .R => .R,
-                .D => .D,
-            }) == b_end) {
+            if (pb.do_action(if (a == .Z) .Z else .from(b_end.facing)) == b_end) {
                 result[s] = pb;
                 s += 1;
             }
@@ -303,14 +270,7 @@ pub const Board = packed struct(if (endless) u64 else u60) {
     pub fn do_actions(b: Board, actions: []const u8) ?Board {
         var p = b;
         for (actions) |c| {
-            p = p.do_action(switch (c) {
-                'Z' => .Z,
-                'U' => .U,
-                'L' => .L,
-                'R' => .R,
-                'D' => .D,
-                else => unreachable,
-            }) orelse return null;
+            p = p.do_action(.from(c)) orelse return null;
         }
         return p;
     }

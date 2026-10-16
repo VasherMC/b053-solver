@@ -24,6 +24,14 @@ pub const Facing = enum(u2) {
             .Z => unreachable,
         };
     }
+    pub fn format(f: Facing, w: *std.Io.Writer) !void {
+        try w.writeByte(switch (f) {
+            .U => 'U',
+            .L => 'L',
+            .R => 'R',
+            .D => 'D',
+        });
+    }
 };
 
 pub const Action = enum(u3) {
@@ -51,6 +59,15 @@ pub const Action = enum(u3) {
             },
             else => comptime unreachable,
         };
+    }
+    pub fn format(a: Action, w: *std.Io.Writer) !void {
+        try w.writeByte(switch (a) {
+            .U => 'U',
+            .L => 'L',
+            .R => 'R',
+            .D => 'D',
+            .Z => 'Z',
+        });
     }
 };
 
