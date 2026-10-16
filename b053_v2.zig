@@ -30,14 +30,14 @@ pub fn is_duplicate_board2(a: Board, b: Board, a_cant_z: bool, b_cant_z: bool) b
     return a_cant_z or b_cant_z;
 }
 
-const BT = @typeInfo(Board).@"struct".backing_integer.?;
+const BT = if (endless) u73 else if (wings) u70 else u69;
 /// Least significant to most significant bits
 /// (important for quotienting and sorting)
 /// having facing as LSB makes streaming deduplication possible/simpler
-pub const Board = packed struct(if (wings) u70 else u69) {
+pub const Board = packed struct(BT) {
     facing: Facing,
     gray: Pos,
-    pocket: u2, // if (endless) u6 else u1
+    pocket: if (endless) u6 else u2, // if (endless) u6 else u1
     stairs: Pos, // u6, >36 is position within pocket
     solid1: Pos,
     solid2: Pos,
@@ -304,6 +304,20 @@ pub const Board = packed struct(if (wings) u70 else u69) {
     pub fn holding_stairs(b: Board) bool {
         return b.stairs > 35;
     }
+    pub fn do_actions(b: Board, actions: []const u8) ?Board {
+        var p = b;
+        for (actions) |c| {
+            p = p.do_action(switch (c) {
+                'Z' => .Z,
+                'U' => .U,
+                'L' => .L,
+                'R' => .R,
+                'D' => .D,
+                else => unreachable,
+            }) orelse return null;
+        }
+        return p;
+    }
 };
 
 pub const Action = enum(u3) { Z, U, L, R, D };
@@ -372,4 +386,29 @@ test "Tile" {
     try std.testing.expect(b053.do_action(.Z).?.do_action(.Z).? == b053);
     try std.testing.expect(b053.do_action(.D).?.tileCount() == 33);
     try std.testing.expect(b053.do_action(.U).?.tileCount() == 32);
+}
+
+test "Add (wings)" {
+    if (!wings) return error.SkipZigTest;
+    for ([2][]const u8{
+        "DLLDDRDRZRRURULUULLDLZRURRLZLRZRZDZUZUDZLLDLZRURRZLLRZLDLZLDUZUDZRRLZRURZLZDLDZURURZLZDLUZDZRUZLUDZRRLZRZUDRZR",
+        "ZLLRRLZURZDZRRZUDLLRZLLLRZLDDDDUZUUZDDZDRRZRRURU",
+    }) |actions| {
+        const p = b053.do_actions(actions).?;
+        try std.testing.expect(p.tiles == add_tile);
+        try std.testing.expect(p.holding_stairs());
+    }
+}
+
+test "Add (endless)" {
+    if (!endless) return error.SkipZigTest;
+    for ([3][]const u8{
+        "ZRZLUDZRZRZLZRZRDZUUDZLLRZLZURZDLLZRZLZRZLLRZLZRZLDUUDZDZURLZLRZDZDZUZLRDZUZDDZUZDZUZDDRZLUUZDZUZDZUUZDDUZDZUZDRLLRZRZRRZD",
+        "ZRZLUDZRZRZLZRZRDZUUDZLLRZLZURZDLLZRZLZRZLLRZLZRZLDUUDZDZURLZLRZDZDZUZLRDZDZUZDZUZDRZLDRZLUUDZLRZRRRZD",
+        "ZRZLUDZRZRZLZRZRDZUUDZLLRZLZURZDLLZRZLZRZLLDZURZLUDZRZLLRZDZDZUZLRDZDZUZDZUZDRZLDRZLUUDZLRZRRRZD",
+    }) |actions| {
+        const p = b053.do_actions(actions).?;
+        try std.testing.expect(p.tiles == add_tile);
+        try std.testing.expect(p.holding_stairs());
+    }
 }
