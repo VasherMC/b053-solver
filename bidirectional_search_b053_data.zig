@@ -156,8 +156,7 @@ fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !
             var write_i: usize = 0;
             for (new_states.items, 0..) |new, read_i| {
                 while (main_i < states.items.len and bfs.backing(states.items[main_i]) < bfs.backing(new)) main_i += 1;
-                if (main_i == states.items.len) break;
-                if (states.items[main_i] == new) {
+                if (main_i < states.items.len and states.items[main_i] == new) {
                     continue; // skip writing and incrementing write_i
                 }
                 // same-depth duplicate
