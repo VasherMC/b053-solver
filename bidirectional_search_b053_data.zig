@@ -111,7 +111,7 @@ fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir, deb
 }
 
 // run the backwards portion of the bidirectional search
-fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, debug: bool) !bool {
+fn bidi(start: anytype, start_tilecount: u6, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, debug: bool) !bool {
     var states: std.ArrayList(Item) = .empty;
     var next_states = switch (@TypeOf(start)) {
         u35 => try possible_end_states(start, alloc), // all possible arrangements of the brand
@@ -122,11 +122,6 @@ fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, d
         },
         else => comptime unreachable,
     };
-    const start_tilecount: u6 = @popCount(switch (@TypeOf(start)) {
-        u35 => start,
-        Item => start.tiles,
-        else => unreachable,
-    }); // pocket contains stairs only
     // we ignore depth here
     // since end states can have either parity, just implement something simple first and optimize later
     for (start_tilecount..data_complete_tiles) |tilecount| {
@@ -248,11 +243,11 @@ test "trailer brand intermediate" {
     try f.close(std.testing.io);
     // run the test
     std.debug.print("----- Searching from tilecount 19 back to b053-data/{}\n", .{data_complete_tiles});
-    try std.testing.expect(try bidi(trailer_brand_19, std.testing.allocator, std.testing.io, dir, false));
+    try std.testing.expect(try bidi(trailer_brand_19, 19, std.testing.allocator, std.testing.io, dir, false));
     std.debug.print("----- Searching from tilecount 16 back to b053-data/{}\n", .{data_complete_tiles});
-    try std.testing.expect(try bidi(trailer_brand_16, std.testing.allocator, std.testing.io, dir, false));
+    try std.testing.expect(try bidi(trailer_brand_16, 16, std.testing.allocator, std.testing.io, dir, false));
     std.debug.print("----- Searching from tilecount 14 back to b053-data/{}\n", .{data_complete_tiles});
-    try std.testing.expect(try bidi(trailer_brand_14, std.testing.allocator, std.testing.io, dir, false));
+    try std.testing.expect(try bidi(trailer_brand_14, 14, std.testing.allocator, std.testing.io, dir, false));
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -260,6 +255,6 @@ pub fn main(init: std.process.Init) !void {
     const dir = try std.Io.Dir.cwd().openDir(io, "b053-data", .{ .iterate = true });
     for ([2]u35{ brand.bee_tile, brand.add_tile }, [2][]const u8{ "Bee", "Add" }) |tile, name| {
         std.debug.print("\nRunning backwards search from {s}'s brand\n", .{name});
-        if (try bidi(tile, init.gpa, io, dir, true)) std.debug.print("\nFound a path for {s}!\n\n", .{name});
+        if (try bidi(tile, @popCount(tile), init.gpa, io, dir, true)) std.debug.print("\nFound a path for {s}!\n\n", .{name});
     }
 }
