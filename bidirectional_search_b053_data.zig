@@ -87,7 +87,7 @@ fn possible_end_states(tiles: u35, alloc: std.mem.Allocator) !std.ArrayList(Item
 }
 
 // see if any of our generated backwards states match with any stored forwards states at any depth
-fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir) !bool {
+fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir, debug: bool) !bool {
     var buf: [20]u8 = undefined;
     outer: for (0..250) |depth| {
         const fname = try bfs.setFilenameFor(buf[0..], data_complete_tiles, @intCast(depth));
@@ -95,7 +95,7 @@ fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir) !bo
         defer f.close(io) catch {};
         var r = f.reader();
         var fw_state = r.pop() orelse continue;
-        std.debug.print("Checking depth {}...\n", .{depth});
+        if (debug) std.debug.print("Checking depth {}...\n", .{depth});
         for (backwards_states) |bw_state| {
             while ((bfs.backing(fw_state) >> 3) < (bfs.backing(bw_state) >> 3)) fw_state = r.pop() orelse continue :outer;
             if (bfs.equal_mod_facing(fw_state, bw_state)) {
@@ -111,16 +111,16 @@ fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir) !bo
 }
 
 // run the backwards portion of the bidirectional search
-fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !bool {
+fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, debug: bool) !bool {
     var states: std.ArrayList(Item) = .empty;
     var next_states = switch (@TypeOf(start)) {
-        u35 => try possible_end_states(start, alloc),
+        u35 => try possible_end_states(start, alloc), // all possible arrangements of the brand
         Item => blk: {
             var x = try std.ArrayList(Item).initCapacity(alloc, 1);
             x.appendAssumeCapacity(start);
             break :blk x;
         },
-        else => unreachable,
+        else => comptime unreachable,
     };
     const start_tilecount: u6 = @popCount(switch (@TypeOf(start)) {
         u35 => start,
@@ -130,7 +130,7 @@ fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !
     // we ignore depth here
     // since end states can have either parity, just implement something simple first and optimize later
     for (start_tilecount..data_complete_tiles) |tilecount| {
-        std.debug.print("generating states for tilecount {}\n", .{tilecount});
+        if (debug) std.debug.print("generating states for tilecount {}\n", .{tilecount});
         // finish generating states for the tilecount with nonbreaking moves
         // we have an initial set of states for the tilecount
         states = .empty; // all states at current-depth
@@ -138,7 +138,7 @@ fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !
         var new_states: std.ArrayList(Item) = next_states; // intermediate for next-depth
         next_states = .empty; // intermediate for next-tilecount
         while (new_states.items.len > 0) {
-            std.debug.print("new states: {}, total: {}\n", .{ new_states.items.len, states.items.len });
+            if (debug) std.debug.print("new states: {}, total: {}\n", .{ new_states.items.len, states.items.len });
             // generate child states at new depth
             cur_states = new_states;
             new_states = .empty;
@@ -170,7 +170,7 @@ fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !
         //std.debug.assert(cur_states.items.len == 0); undefined after deinit
         // we've generated all same-tilecount (nonbreaking) states
         // generate states for next tilecount
-        std.debug.print("generating breaking moves from tilecount {} back to {}\n", .{ tilecount, tilecount + 1 });
+        if (debug) std.debug.print("generating breaking moves from tilecount {} back to {}\n", .{ tilecount, tilecount + 1 });
         for (states.items) |it| {
             for (it.predecessors_breaking()) |pred| if (pred) |newstate| try next_states.append(alloc, newstate);
         }
@@ -186,14 +186,15 @@ fn bidi(start: anytype, alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir) !
         // clean up
         states.deinit(alloc);
     }
-    std.debug.print("checking if any states match...\n", .{});
+    std.debug.print("checking if any states match (have {} states)...\n", .{next_states.items.len});
     // now we have the list of next_states (breaking moves only) for the desired tilecount
     defer next_states.deinit(alloc);
-    return try check_any_matching(next_states.items, io, dir);
+    return try check_any_matching(next_states.items, io, dir, debug);
 }
 
 test "trailer brand intermediate" {
     // see trailer brand solution #2 in b053.zig
+    std.debug.print("---------- Testing backtracking on intermediate trailer brand solution ----------\n", .{});
     const trailer_brand_19 = Item{
         .tiles = 0b100001_100000_111110_110011_111000_11110,
         .facing = .R,
@@ -238,15 +239,20 @@ test "trailer brand intermediate" {
     try std.testing.expect(trailer_brand_14 == trailer_brand_16.do_actions("DUZDDDUUZDZDZUUZDDLR", 16).?);
 
     const dir = try std.Io.Dir.cwd().openDir(std.testing.io, "b053-data", .{ .iterate = true });
+    // skip if we don't have data at reasonable depth for the supposed data_complete_tiles tilecount
     var buf: [20]u8 = undefined;
     const fname = try bfs.setFilenameFor(buf[0..], data_complete_tiles, 150);
     var f = bfs.mappedStateStream.init(std.testing.io, dir, fname) catch {
         return error.SkipZigTest;
     } orelse return error.SkipZigTest;
     try f.close(std.testing.io);
-    try std.testing.expect(try bidi(trailer_brand_19, std.testing.allocator, std.testing.io, dir));
-    try std.testing.expect(try bidi(trailer_brand_16, std.testing.allocator, std.testing.io, dir));
-    try std.testing.expect(try bidi(trailer_brand_14, std.testing.allocator, std.testing.io, dir));
+    // run the test
+    std.debug.print("----- Searching from tilecount 19 back to b053-data/{}\n", .{data_complete_tiles});
+    try std.testing.expect(try bidi(trailer_brand_19, std.testing.allocator, std.testing.io, dir, false));
+    std.debug.print("----- Searching from tilecount 16 back to b053-data/{}\n", .{data_complete_tiles});
+    try std.testing.expect(try bidi(trailer_brand_16, std.testing.allocator, std.testing.io, dir, false));
+    std.debug.print("----- Searching from tilecount 14 back to b053-data/{}\n", .{data_complete_tiles});
+    try std.testing.expect(try bidi(trailer_brand_14, std.testing.allocator, std.testing.io, dir, false));
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -254,6 +260,6 @@ pub fn main(init: std.process.Init) !void {
     const dir = try std.Io.Dir.cwd().openDir(io, "b053-data", .{ .iterate = true });
     for ([2]u35{ brand.bee_tile, brand.add_tile }, [2][]const u8{ "Bee", "Add" }) |tile, name| {
         std.debug.print("\nRunning backwards search from {s}'s brand\n", .{name});
-        if (try bidi(tile, init.gpa, io, dir)) std.debug.print("\nFound a path for {s}!\n\n", .{name});
+        if (try bidi(tile, init.gpa, io, dir, true)) std.debug.print("\nFound a path for {s}!\n\n", .{name});
     }
 }
