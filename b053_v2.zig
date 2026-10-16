@@ -312,6 +312,84 @@ pub const Board = packed struct(BT) {
         }
         return p;
     }
+    pub fn print(b: Board) void {
+        for (0..36) |i| {
+            if (i == 35) {
+                std.debug.print("R", .{}); // rock in bottom-right corner
+            } else {
+                const p = 34 - i;
+                if (p == b.gray) {
+                    std.debug.print("{c}", .{@as(u8, switch (b.facing) {
+                        .U => '^',
+                        .L => '<',
+                        .R => '>',
+                        .D => 'v',
+                    })});
+                } else {
+                    const tile = b.at(@intCast(p));
+                    std.debug.print("{c}", .{@as(u8, switch (tile) {
+                        .Empty => '_',
+                        .Stairs => 'S',
+                        .Glass => '#',
+                        .Tile => 'T',
+                    })});
+                }
+            }
+            // end of a row
+            if (i % 6 == 5) {
+                if ((i / 6) + (b.gray + 1) / 6 == 5) {
+                    var buf: [32]u8 = undefined;
+                    for (0..b.pocket) |p| {
+                        buf[p] = '#';
+                        if (b.stairs -% 36 == p) buf[p] = 'S';
+                        if (b.solid1 -% 36 == p) buf[p] = 'T';
+                        if (b.solid2 -% 36 == p) buf[p] = 'T';
+                        if (b.solid3 -% 36 == p) buf[p] = 'T';
+                    }
+                    std.debug.print(" -- pos {} standing on {}, pocket: {} [{s}], hovering {}\n", .{ b.gray, b.at(b.gray), b.pocket, buf[0..b.pocket], b.hovering });
+                } else std.debug.print("\n", .{});
+            }
+        }
+    }
+    pub fn format(b: Board, w: *std.Io.Writer) !void {
+        for (0..36) |i| {
+            if (i == 35) {
+                try w.writeByte('R'); // rock in bottom-right corner
+            } else {
+                const p = 34 - i;
+                if (p == b.gray) {
+                    try w.writeByte(switch (b.facing) {
+                        .U => '^',
+                        .L => '<',
+                        .R => '>',
+                        .D => 'v',
+                    });
+                } else {
+                    const tile = b.at(@intCast(p));
+                    try w.writeByte(switch (tile) {
+                        .Empty => '_',
+                        .Stairs => 'S',
+                        .Glass => '#',
+                        .Tile => 'T',
+                    });
+                }
+            }
+            // end of a row
+            if (i % 6 == 5) {
+                if ((i / 6) + (b.gray + 1) / 6 == 5) {
+                    var buf: [32]u8 = undefined;
+                    for (0..b.pocket) |p| {
+                        buf[p] = '#';
+                        if (b.stairs -% 36 == p) buf[p] = 'S';
+                        if (b.solid1 -% 36 == p) buf[p] = 'T';
+                        if (b.solid2 -% 36 == p) buf[p] = 'T';
+                        if (b.solid3 -% 36 == p) buf[p] = 'T';
+                    }
+                    try w.print(" -- pos {} standing on {}, pocket: {} [{s}], hovering {}\n", .{ b.gray, b.at(b.gray), b.pocket, buf[0..b.pocket], b.hovering });
+                } else try w.writeAll("\n");
+            }
+        }
+    }
 };
 
 /// Grid movement (prevent wrapping etc)
@@ -355,6 +433,17 @@ pub const b053 = Board{
 
 test {
     std.testing.refAllDecls(@import("b053_v2.zig"));
+}
+test "format" {
+    if (false) {
+        base.print(b053);
+        base.print(b053.do_actions("ZLRRLZURRR").?);
+        base.print(b053.do_actions("ZLRRLZULL").?);
+        base.print(b053.do_actions("ZLRRLZULLDDDDD").?);
+        base.print(b053.do_actions("ZLRRLZULLDDDDDRRZ").?);
+        // test pocket printing
+        if (endless) base.print(b053.do_actions("LZRZDUZDDUZRZDZDZLZ").?);
+    }
 }
 test "Tile" {
     try std.testing.expect(b053.at(0) == .Glass);
