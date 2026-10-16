@@ -101,7 +101,7 @@ fn check_any_matching(backwards_states: []Item, io: std.Io, dir: std.Io.Dir) !bo
             if (bfs.equal_mod_facing(fw_state, bw_state)) {
                 // since the next move must be a breaking move (onto glass), facing and can/cant Z don't matter
                 std.debug.print("Found a path from state {} at depth {}\n", .{ fw_state, depth });
-                try bfs.trace_path_files(io, dir, fw_state, @intCast(depth));
+                try bfs.trace_path_files(io, dir, fw_state, @intCast(depth), data_complete_tiles);
                 return true;
             }
         }

@@ -67,7 +67,7 @@ fn dfs_main(io: std.Io, dir: std.Io.Dir, alloc: std.mem.Allocator, tilecount: u6
         for (std.enums.values(bfs.brand.Action)) |a| if (a != .Z) if (item.do_action_breaking(a, tilecount)) |start_point| if (try dfs(start_point, alloc, tilecount - 1, depth + 1, &arr)) {
             std.debug.print("DFS returned: found\n", .{});
             std.debug.print("Start state: {} move {}\n", .{ item, a });
-            try bfs.trace_path_files(io, dir, item, depth);
+            try bfs.trace_path_files(io, dir, item, depth, tilecount);
         };
     }
 }

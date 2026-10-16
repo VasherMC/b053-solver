@@ -108,7 +108,7 @@ fn trace_path_to_first_matching(io: std.Io, dir: std.Io.Dir, tilecount: u6, comp
         std.debug.print("Couldn't find any matching end state; are files available?\n", .{});
         return;
     };
-    try bfs.trace_path_files(io, dir, result.item, result.depth);
+    try bfs.trace_path_files(io, dir, result.item, result.depth, tilecount);
 }
 
 pub fn main(init: std.process.Init) !void {

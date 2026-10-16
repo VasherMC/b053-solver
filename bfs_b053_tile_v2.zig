@@ -629,13 +629,13 @@ const native_endian = @import("builtin").cpu.arch.endian();
 
 /// Backtrace path through state space
 /// assume end state is holding stairs (and not endless)
-pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16) !void {
+pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16, tilecount: u6) !void {
     defer std.debug.print("\n\n", .{});
     var cur: Item = end;
-    var cur_tilecount: u6 = cur.empty_pocket_tilecount();
-    const start_pocket: u6 = cur.get_pocket(cur_tilecount); // 1 (stairs)
-    std.debug.assert(end.holding_stairs());
-    std.debug.assert(start_pocket == 1);
+    var cur_tilecount: u6 = if (tilecount > 0) tilecount else cur.empty_pocket_tilecount();
+    //const start_pocket: u6 = cur.get_pocket(cur_tilecount); // 1 (stairs)
+    //std.debug.assert(end.holding_stairs());
+    //std.debug.assert(start_pocket == 1);
     var d = depth;
     outer: while (d > 0) : (d -= 1) {
         if (cur.cant_z) {
