@@ -18,7 +18,7 @@ pub const Tile = enum(u2) {
     }
 };
 
-const orig_Board = @import("brand.zig").Board;
+const orig_Board = @import("b053.zig").Board;
 pub const endless = false;
 pub const stairs_tile = false; // whether the stairs is counted in Board.tiles
 

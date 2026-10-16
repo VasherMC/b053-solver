@@ -1,7 +1,7 @@
 /// BFS bruteforcer for b053
 const std = @import("std");
 
-const brand = @import("brand.zig");
+const brand = @import("b053.zig");
 
 const Board = brand.Board;
 const Action = brand.Action;

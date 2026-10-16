@@ -1,5 +1,5 @@
 const std = @import("std");
-const brand = @import("brand.zig");
+const brand = @import("b053.zig");
 const Action = brand.Action;
 const Board = brand.Board;
 const do_action = brand.do_action;

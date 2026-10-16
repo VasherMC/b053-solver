@@ -4,7 +4,7 @@
 /// within-tilecount is regular BFS
 const std = @import("std");
 
-const brand = @import("brand.zig");
+const brand = @import("b053.zig");
 
 // Limit move depth, if a solution is known to exist within a specific move count
 const MAX_DEPTH: usize = 512; // >512 can't be serialized in u8

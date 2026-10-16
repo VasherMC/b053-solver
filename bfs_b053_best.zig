@@ -2,7 +2,7 @@
 /// based on bfs_b023.zig
 const std = @import("std");
 
-const brand = @import("brand.zig");
+const brand = @import("b053.zig");
 
 // The desired end state
 // one of add, gor, lev, cif, dev, trailer
