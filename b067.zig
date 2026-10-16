@@ -427,13 +427,13 @@ test "b067_start" {
     try std.testing.expect(b067.at(35) == 0);
 
     try std.testing.expect(b067.cant_Z(.D));
-    if (wings) try std.testing.expect(b067.do_action(.L) == null);
+    if (wings) try std.testing.expect(b067.do_action(.L) == null); // hit by beaver
     if (wings) try std.testing.expect(b067.do_action(.D) != null);
     if (!wings) try std.testing.expect(b067.do_action(.D) == null);
     if (wings) try std.testing.expect(b067.do_action(.U).?.do_action(.D).? == b067);
     try std.testing.expect(b067.do_action(.R).?.cant_Z(.R));
     try std.testing.expect(!b067.do_action(.R).?.do_action(.D).?.cant_Z(.D));
-    if (wings and sword) try std.testing.expect(b067.do_actions("DZURLZ").?.do_action(.Z).?.beaver.p == 36);
+    if (sword) try std.testing.expect(b067.do_actions("RDZULZ").?.do_action(.Z).?.beaver.p == 36);
 }
 test "gor sequence (endless)" {
     if (!endless) return error.SkipZigTest;

@@ -51,14 +51,14 @@ inline fn toItem(x: inmem_ItemT) Item {
     return switch (inmem_ItemT) {
         Item => x,
         Item2 => x.to_Item(),
-        else => unreachable,
+        else => comptime unreachable,
     };
 }
 inline fn fromItem(x: Item) inmem_ItemT {
     return switch (inmem_ItemT) {
         Item => x,
         Item2 => .from_Item(x),
-        else => unreachable,
+        else => comptime unreachable,
     };
 }
 
