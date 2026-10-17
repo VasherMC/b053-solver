@@ -162,8 +162,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
     //  -> but reduces memory fragmentation to near-zero
     //  -> and significantly reduces the number of duplicate states stored at any given time from O(B*D) to O(B)
     const Extra_Move_limit = MAX_DEPTH;
-    var finalized: [Extra_Move_limit][MAX_DEPTH]std.ArrayList(Item) =
-        [_][MAX_DEPTH]std.ArrayList(Item){@splat(std.ArrayList(Item).empty)} ** Extra_Move_limit;
+    var finalized: [Extra_Move_limit][MAX_DEPTH]std.ArrayList(Item) = @splat(@splat(.empty));
     try finalized[0][0].append(alloc, .{ .b = b053, .p = .D, .cant_z = false });
     defer {
         for (finalized[0..]) |*f_bucket| for (f_bucket[0..]) |*bucket| if (bucket.items.len > 0) bucket.deinit(alloc);
@@ -208,7 +207,7 @@ fn best_first_search(alloc: std.mem.Allocator) !void {
             if (todo.items.len == 0 and depth > max_depth_so_far) break;
             if (todo.items.len == 0) continue;
             max_depth_so_far = @max(max_depth_so_far, depth);
-            var stats_dupe_depth = if (duplicate_stats) [_]usize{0} ** MAX_DEPTH else {};
+            var stats_dupe_depth = if (duplicate_stats) @as([MAX_DEPTH]usize, @splat(0)) else {};
             std.debug.print("hdiff {} depth {}: generated {} states\n", .{ hdiff, depth, todo.items.len });
             total_generated += todo.items.len;
             std.sort.pdq(Item, todo.items, {}, item_lessThan);

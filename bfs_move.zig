@@ -333,13 +333,13 @@ fn run_bfs_partition2(alloc: std.mem.Allocator, io: std.Io) !void {
     const b053top: u16 = @intCast(@as(u80, @bitCast(b053)) >> 64);
     const b053val: u64 = @truncate(@as(u80, @bitCast(b053)));
     // Invariant: todo contains one depth
-    var todo = [_]compressedStream8{.empty} ** 65536;
+    var todo: [65536]compressedStream8 = @splat(.empty);
     try todo[b053top].write(null, b053val, alloc);
     var todo_len: usize = 1;
     // Invariant: seen is sorted by (state)  [ignoring depth]
-    var seen = [_]compressedStream8{.empty} ** 65536;
+    var seen: [65536]compressedStream8 = @splat(.empty);
     try seen[b053top].write(null, b053val, alloc);
-    var seen_par = [_]std.ArrayList(Action){.empty} ** 65536;
+    var seen_par: [65536]std.ArrayList(Action) = @splat(.empty);
     try seen_par[b053top].append(alloc, .Z);
     var seen_len: usize = 1;
     //
@@ -352,9 +352,9 @@ fn run_bfs_partition2(alloc: std.mem.Allocator, io: std.Io) !void {
         std.debug.print("\n\ndepth {}  todo {}\n", .{ depth, todo_len });
         const insert_start = Timestamp.now(io, .awake);
         // frontier parts
-        var parts = [_]std.ArrayList(u64){.empty} ** 65536;
+        var parts: [65536]std.ArrayList(u64) = @splat(.empty);
         //
-        var parents = [_]std.ArrayList(Action){.empty} ** 65536;
+        var parents: [65536]std.ArrayList(Action) = @splat(.empty);
         var i: usize = 0;
         for (&todo, 0..65536) |*todo_bucket, top| {
             // can parallelize, but need to synchronize writes
@@ -480,8 +480,8 @@ fn run_bfs_partition2(alloc: std.mem.Allocator, io: std.Io) !void {
         std.debug.print("{d: >5} buckets ({}%) contained between {} and {} items\n", .{ count, @as(u64, count) * 100 / 65536, last, bucket_items[65535] - 1 });
         // diff stats
         if (false) {
-            var diffs = [_]usize{0} ** 8;
-            var diffs2 = [_]usize{0} ** 8;
+            var diffs: [8]usize = @splat(0);
+            var diffs2: [8]usize = @splat(0);
             for (seen, 0..65536) |s, _| {
                 if (s.len <= 1) continue;
                 var sr = s.reader();

@@ -112,7 +112,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
     try todo.append(alloc, .{ .b = b223, .d = 0, .p = .Z, .cant_z = true });
     // while iterating through 'todo' we prune as well by checking finalized before inserting
     // each bucket should be fast to query by Board (at worst O(logn))
-    var finalized = [_]std.ArrayList(Item){.empty} ** MAX_DEPTH;
+    var finalized: [MAX_DEPTH]std.ArrayList(Item) = @splat(.empty);
     defer {
         for (&finalized) |*f_bucket| if (f_bucket.items.len > 0) f_bucket.deinit(alloc);
         if (todo.items.len > 0) todo.deinit(alloc);
@@ -120,7 +120,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator) !void {
     //
     var found = false;
     for (0..MAX_DEPTH) |depth| {
-        var stats_dupe_depth = if (duplicate_stats) [_]usize{0} ** MAX_DEPTH else void;
+        var stats_dupe_depth = if (duplicate_stats) @as([MAX_DEPTH]usize, @splat(0)) else void;
         std.debug.print("sorting and actioning depth {}\n", .{depth});
         std.sort.pdq(Item, todo.items, {}, item_lessThan);
         finalized[depth] = try .initCapacity(alloc, todo.items.len);

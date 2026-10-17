@@ -278,7 +278,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator, io: std.Io, start_tiles: u6) !void {
     //const t_start = Timestamp.now(io, .awake);
     // grouped by move depth
     // individual buckets sorted or otherwise mergeable
-    var todo = [_]std.ArrayList(Item){.empty} ** MAX_DEPTH;
+    var todo: [MAX_DEPTH]std.ArrayList(Item) = @splat(.empty);
     var todo_len: usize = 0;
     var tiles: u6 = start_tiles;
     if (start_tiles == b053.tileCount()) {
@@ -292,7 +292,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator, io: std.Io, start_tiles: u6) !void {
     }
     // while iterating through 'todo' we prune as well by checking finalized before inserting
     // each bucket should be fast to query by Board (at worst O(logn))
-    var finalized = [_]std.ArrayList(Item){.empty} ** MAX_DEPTH;
+    var finalized: [MAX_DEPTH]std.ArrayList(Item) = @splat(.empty);
     var total_len: usize = 0;
     defer {
         for (&finalized) |*f_bucket| if (f_bucket.items.len > 0) f_bucket.deinit(alloc);
@@ -302,7 +302,7 @@ fn run_bfs_tile(alloc: std.mem.Allocator, io: std.Io, start_tiles: u6) !void {
     //var over_100 = false;
     while (tiles >= MIN_TILES) {
         var processed: usize = 0;
-        var stats_dupe_depth = if (duplicate_stats) [_]usize{0} ** MAX_DEPTH else {};
+        var stats_dupe_depth = if (duplicate_stats) @as([MAX_DEPTH]usize, @splat(0)) else {};
         for (&todo, 0..todo.len) |*todo_bucket, depth| {
             if (todo_bucket.items.len == 0) continue;
             std.debug.print("sorting and actioning depth {}\n", .{depth});
