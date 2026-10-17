@@ -81,7 +81,7 @@ fn collect_stairs(alloc: std.mem.Allocator, io: std.Io, dir: std.Io.Dir, tilecou
     return 0;
 }
 
-const native_endian = @import("builtin").cpu.arch.endian();
+const native_endian = @import("builtin").target.cpu.arch.endian();
 
 fn writeStairsDepth(w: *std.Io.File.Writer, depth: u16, stairs: []u35) !void {
     // Format: 5 bytes depth, 5 bytes length (count of brands at this depth), <length> 5-byte brands

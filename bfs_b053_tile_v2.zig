@@ -590,7 +590,7 @@ pub const mappedStateStream = struct {
     pub fn reader(self: *const @This()) streamT.Reader {
         // TODO
         // advise we will read sequentially
-        switch (@import("builtin").os.tag) {
+        switch (@import("builtin").target.os.tag) {
             .windows => {
                 //   PrefetchVirtualMemory(); // not yet in zig std?
                 //   // https://codeberg.org/ziglang/zig/pulls/30840
@@ -610,7 +610,7 @@ pub const mappedStateStream = struct {
         // advise that we no longer need the memory (in the short term)
         // we want it to remain mapped but be discardable / evictable
         // however we shouldn't *force* it to be evicted
-        switch (@import("builtin").os.tag) {
+        switch (@import("builtin").target.os.tag) {
             .windows => {
                 // TODO windows equivalent
             },
@@ -632,7 +632,7 @@ pub const mappedStateStream = struct {
     }
 };
 
-const native_endian = @import("builtin").cpu.arch.endian();
+const native_endian = @import("builtin").target.cpu.arch.endian();
 
 /// Backtrace path through state space
 /// assume end state is holding stairs (and not endless)

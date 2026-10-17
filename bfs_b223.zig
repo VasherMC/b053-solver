@@ -33,7 +33,7 @@ pub fn main(init: std.process.Init) !void {
     try run_bfs_tile(gpa);
 }
 
-const native_endian = @import("builtin").cpu.arch.endian();
+const native_endian = @import("builtin").target.cpu.arch.endian();
 
 const compressedStream8 = @import("bfs_move.zig").compressedStream8;
 
