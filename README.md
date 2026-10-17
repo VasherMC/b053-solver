@@ -36,6 +36,17 @@ This is done by `query_b053_data.zig`, which confirms Tan's brand is unreachable
 and `stairs.zig`, which collects and deduplicates all distinct brand carvings
 (ignoring now-extraneous info like which tiles are glass or not).
 
+The stored states can also be used as the forwards part of a bidirectional search
+(`bidirectional_search_b053_data.zig`), which allows checking reachability of
+specific brands at lower tilecounts. The existing search file checks Add's and Bee's brands.
+In practice, running a backwards search for these two brands is fastest (5 minutes) when using
+a minimum tilecount of `22` present in `b053-data/` (assuming the data is already generated).
+(Higher tilecounts spend more time generating states in the backwards search, while
+lower tilecounts spend more time just reading the 100+GB of forward state data).
+However, running with a minumum tilecount of `23` (11 minutes) or maybe even `24` is reasonable
+to avoid the high time and storage cost of generating `b053-data/` for lower tilecounts.
+
+
 ### Performance (Old)
 
 Running commit `b6552f6` under the following conditions:

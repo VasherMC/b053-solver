@@ -3,7 +3,7 @@ const bfs = @import("bfs_b053_tile_v2.zig");
 const brand = @import("b053_v2.zig");
 
 const MIN_TILES = 17; // 18 (19) for Bee, 17 (18) for Add
-const data_complete_tiles = 20; // for which we have complete b053-data/ for (about 300 GB)
+const data_complete_tiles = 22; // for which we have complete b053-data/ for (22 found to be ~optimal for Add/Bee)
 const Item = bfs.Item;
 test {
     std.testing.refAllDecls(@import("bidirectional_search_b053_data.zig"));
