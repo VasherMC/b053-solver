@@ -640,6 +640,10 @@ pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16, tile
     defer std.debug.print("\n\n", .{});
     var cur: Item = end;
     var cur_tilecount: u6 = if (tilecount > 0) tilecount else cur.empty_pocket_tilecount();
+    if (end.cant_z == false) { // facing is valid
+        std.debug.print("Path to state\n{f}\n", .{end.as_Board(tilecount)});
+        // else we defer until we know facing from predecessor state
+    }
     //const start_pocket: u6 = cur.get_pocket(cur_tilecount); // 1 (stairs)
     //std.debug.assert(end.holding_stairs());
     //std.debug.assert(start_pocket == 1);
@@ -665,6 +669,14 @@ pub fn trace_path_files(io: std.Io, dir: std.Io.Dir, end: Item, depth: u16, tile
                         for (std.enums.values(Action)) |a| {
                             if (a == .Z and (tilecount_diff == 1 or candidate.cant_z or candidate.gray != cur.gray)) continue;
                             if (do_action(candidate, a, new_tilecount)) |result| if (result.cant_z and backing(cur) ^ backing(result) < 4) {
+                                if (cur == end) {
+                                    var fixed_end = end.as_Board(tilecount);
+                                    fixed_end.facing = switch (a) {
+                                        .Z => candidate.facing,
+                                        else => .from(a),
+                                    };
+                                    std.debug.print("Path to state\n{f}\n", .{fixed_end});
+                                }
                                 std.debug.print("{f}", .{a});
                                 cur = candidate;
                                 cur_tilecount = new_tilecount;
